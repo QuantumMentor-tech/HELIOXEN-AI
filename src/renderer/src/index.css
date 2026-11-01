@@ -2,6 +2,207 @@
 @tailwind components;
 @tailwind utilities;
 
+/* =====================================================================
+   HELIOXEN AI — DESIGN SYSTEM & MOTION TOKENS (Step 9 Baseline)
+   Color-scheme: Cinematic Deep Space with Luminous Orbital Accents
+   WCAG AA Compliance: Text contrast ratios > 4.5:1 against dark surfaces
+   Motion Philosophy: Purposeful, fast, restrained, accessible, performant
+   ===================================================================== */
+
 :root {
   color-scheme: dark;
+
+  /* Surfaces & Backgrounds */
+  --hx-color-bg-space: #070a10;           /* Deepest application background */
+  --hx-color-bg-panel: #0d121d;           /* Left navigation & right context panels */
+  --hx-color-bg-card: #131b2a;            /* Content cards, dialogs, execution traces */
+  --hx-color-bg-surface-elevated: #182235;/* Elevated popovers, tooltips, floating badges */
+  --hx-color-bg-hover: #1c273c;           /* Interactive surface hover */
+  --hx-color-bg-active: #23314d;          /* Interactive surface pressed */
+
+  /* Text & Content (WCAG AA Compliance Verified) */
+  --hx-color-text-primary: #f3f4f6;       /* Main headings, active inputs (>14:1 contrast on #070a10) */
+  --hx-color-text-secondary: #9ca3af;     /* Body copy, labels (>7:1 contrast on #070a10) */
+  --hx-color-text-muted: #768390;         /* Footers, timestamps, placeholders (>5.1:1 contrast on #070a10) */
+  --hx-color-text-inverse: #070a10;       /* Dark text on bright cyan badges */
+
+  /* Brand Accents (Derived from Futuristic Helioxen Orbital Logo) */
+  --hx-color-accent-cyan: #00f0ff;        /* Primary vibrant neon cyan */
+  --hx-color-accent-cyan-hover: #33f3ff;  /* Hover state for primary cyan */
+  --hx-color-accent-sky: #38bdf8;         /* Active state / speaking wave cyan */
+  --hx-color-accent-blue: #0055ff;        /* Core energy orbital blue */
+  --hx-color-accent-blue-hover: #2670ff;  /* Hover state for orbital blue */
+  --hx-color-accent-deep-blue: #0b1e3f;   /* Orb shadow blue */
+
+  /* Borders & Dividers */
+  --hx-color-border-subtle: rgba(56, 189, 248, 0.12); /* Subtle panel boundaries */
+  --hx-color-border-panel: rgba(56, 189, 248, 0.22);  /* Stronger section borders */
+  --hx-color-border-glow: rgba(0, 240, 255, 0.40);   /* Active glowing accent border */
+
+  /* Focus & Accessibility */
+  --hx-color-focus-ring: #00f0ff;         /* Visible keyboard navigation outline */
+  --hx-focus-ring-offset: 2px;
+
+  /* Semantic Status Colors */
+  --hx-color-status-nominal: #10b981;     /* Standby / Connected / Success */
+  --hx-color-status-warning: #f59e0b;     /* Awaiting Approval / Degraded */
+  --hx-color-status-danger: #ef4444;      /* Error / Blocked / Security Alert */
+  --hx-color-status-info: #00f0ff;        /* General Notification / Hint */
+
+  /* Disabled States */
+  --hx-color-disabled-bg: rgba(255, 255, 255, 0.05);
+  --hx-color-disabled-text: rgba(255, 255, 255, 0.25);
+  --hx-color-disabled-border: rgba(255, 255, 255, 0.08);
+
+  /* Typography Scales */
+  --hx-font-family-display: 'Outfit', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --hx-font-family-body: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --hx-font-family-mono: 'JetBrains Mono', 'Cascadia Code', Consolas, 'Courier New', monospace;
+
+  --hx-font-size-xs: 0.75rem;     /* 12px */
+  --hx-font-size-sm: 0.875rem;    /* 14px */
+  --hx-font-size-base: 1rem;      /* 16px */
+  --hx-font-size-lg: 1.125rem;    /* 18px */
+  --hx-font-size-xl: 1.25rem;     /* 20px */
+  --hx-font-size-2xl: 1.5rem;     /* 24px */
+  --hx-font-size-3xl: 1.875rem;   /* 30px */
+
+  --hx-font-weight-normal: 400;
+  --hx-font-weight-medium: 500;
+  --hx-font-weight-semibold: 600;
+  --hx-font-weight-bold: 700;
+
+  --hx-line-height-tight: 1.25;
+  --hx-line-height-snug: 1.375;
+  --hx-line-height-normal: 1.5;
+  --hx-line-height-relaxed: 1.625;
+
+  /* Spacing Scale */
+  --hx-spacing-1: 0.25rem;  /* 4px */
+  --hx-spacing-2: 0.5rem;   /* 8px */
+  --hx-spacing-3: 0.75rem;  /* 12px */
+  --hx-spacing-4: 1rem;     /* 16px */
+  --hx-spacing-5: 1.25rem;  /* 20px */
+  --hx-spacing-6: 1.5rem;   /* 24px */
+  --hx-spacing-8: 2rem;     /* 32px */
+  --hx-spacing-10: 2.5rem;  /* 40px */
+  --hx-spacing-12: 3rem;    /* 48px */
+
+  /* Corner Radii */
+  --hx-radius-sm: 0.25rem;   /* 4px */
+  --hx-radius-md: 0.375rem;  /* 6px */
+  --hx-radius-lg: 0.5rem;    /* 8px */
+  --hx-radius-xl: 0.75rem;   /* 12px */
+  --hx-radius-full: 9999px;
+
+  /* Elevation Shadows & Luminous Glows */
+  --hx-shadow-subtle: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --hx-shadow-card: 0 4px 16px rgba(0, 0, 0, 0.55);
+  --hx-shadow-elevated: 0 8px 32px rgba(0, 0, 0, 0.7);
+  --hx-glow-cyan-sm: 0 0 10px rgba(0, 240, 255, 0.25);
+  --hx-glow-cyan-md: 0 0 20px rgba(0, 240, 255, 0.4);
+  --hx-glow-blue-md: 0 0 20px rgba(0, 85, 255, 0.4);
+
+  /* =====================================================================
+     MOTION TOKENS (Step 9 Expansion)
+     ===================================================================== */
+
+  /* Duration Tokens */
+  --hx-duration-instant: 100ms;       /* Tactile click & press feedback */
+  --hx-duration-fast: 150ms;          /* Micro-interactions: hover, focus ring */
+  --hx-duration-normal: 250ms;        /* Standard transitions: navigation, tabs */
+  --hx-duration-deliberate: 350ms;    /* Structural changes: rail expand, modal */
+  --hx-duration-pulse: 2000ms;        /* Ambient breathing pulse */
+
+  /* Easing Curves */
+  --hx-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);  /* Routine natural UI movement */
+  --hx-ease-enter: cubic-bezier(0, 0, 0.2, 1);       /* Decelerating entrance */
+  --hx-ease-exit: cubic-bezier(0.4, 0, 1, 1);        /* Accelerating exit */
+  --hx-ease-orbital: cubic-bezier(0.34, 1.56, 0.64, 1); /* Harmonic orbital motion */
+
+  /* Composite Transitions */
+  --hx-motion-instant: var(--hx-duration-instant) var(--hx-ease-standard);
+  --hx-motion-fast: var(--hx-duration-fast) var(--hx-ease-standard);
+  --hx-motion-normal: var(--hx-duration-normal) var(--hx-ease-standard);
+  --hx-motion-deliberate: var(--hx-duration-deliberate) var(--hx-ease-standard);
+
+  /* Layering & Z-Index Scale */
+  --hx-z-base: 0;
+  --hx-z-elevated: 10;
+  --hx-z-sticky: 20;
+  --hx-z-dropdown: 30;
+  --hx-z-modal-backdrop: 40;
+  --hx-z-modal: 50;
+  --hx-z-toast: 60;
+  --hx-z-titlebar: 100;
+}
+
+/* =====================================================================
+   KEYFRAME ANIMATIONS
+   ===================================================================== */
+
+@keyframes hx-pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(0, 240, 255, 0.2);
+    border-color: rgba(0, 240, 255, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 18px rgba(0, 240, 255, 0.45);
+    border-color: rgba(0, 240, 255, 0.65);
+  }
+}
+
+@keyframes hx-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Utility classes for motion */
+.animate-hx-pulse-glow {
+  animation: hx-pulse-glow var(--hx-duration-pulse) var(--hx-ease-standard) infinite;
+}
+
+.animate-hx-fade-in {
+  animation: hx-fade-in var(--hx-duration-normal) var(--hx-ease-enter) forwards;
+}
+
+/* =====================================================================
+   REDUCED MOTION ACCESSIBILITY OVERRIDE
+   ===================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-hx-pulse-glow {
+    animation: none !important;
+  }
+  .animate-hx-fade-in {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* Base Body Styles */
+body {
+  background-color: var(--hx-color-bg-space);
+  color: var(--hx-color-text-primary);
+  font-family: var(--hx-font-family-body);
+}
+
+/* Focus visibility rule */
+:focus-visible {
+  outline: 2px solid var(--hx-color-focus-ring);
+  outline-offset: var(--hx-focus-ring-offset);
 }
