@@ -1,22 +1,28 @@
 @echo off
 setlocal enabledelayedexpansion
 
-title HELIOXEN AI — Desktop Assistant Launcher
+title HELIOXEN AI — Desktop Command Center & Voice Assistant Launcher
 
-:: Navigate to script directory (handling spaces in path)
+:: Navigate to script directory (handles paths with spaces)
 cd /d "%~dp0"
 
-echo =====================================================================
-echo                 HELIOXEN AI — DESKTOP LAUNCHER
-echo =====================================================================
+cls
+echo ===============================================================================
+echo            HELIOXEN AI — INTELLIGENT DESKTOP COMMAND LAYER
+echo                  Phase 7: Real-Time Voice & AI Assistant
+echo ===============================================================================
 echo.
 
-:: 1. Verify Node.js is installed and in PATH
+:: 1. Verify Node.js is installed
 where node >nul 2>nul
 if %errorlevel% neq 0 (
-    echo [ERROR] Node.js was not detected in your PATH.
-    echo Please install Node.js (v20+ or v22+ LTS recommended) from:
-    echo   https://nodejs.org/
+    echo [ERROR] Node.js is NOT detected on your system.
+    echo.
+    echo To run HELIOXEN AI, you need to download and install Node.js:
+    echo   1. Visit: https://nodejs.org/
+    echo   2. Download the LTS version (v20.x, v22.x, or v24.x recommended)
+    echo   3. During installation, ensure "Add to PATH" is checked
+    echo   4. Restart your terminal or this script after installing
     echo.
     pause
     exit /b 1
@@ -25,39 +31,117 @@ if %errorlevel% neq 0 (
 :: 2. Verify npm is available
 where npm >nul 2>nul
 if %errorlevel% neq 0 (
-    echo [ERROR] npm package manager was not detected in your PATH.
-    echo Please ensure Node.js and npm are properly added to system PATH.
+    echo [ERROR] npm package manager was not found in PATH.
+    echo Please ensure Node.js was installed with npm enabled in PATH.
     echo.
     pause
     exit /b 1
 )
 
-:: 3. Check for dependencies (node_modules)
-if not exist "node_modules" (
-    echo [INFO] node_modules not found. Installing project dependencies...
+:: Display detected versions
+for /f "tokens=*" %%v in ('node -v 2^>nul') do set "NODE_VER=%%v"
+for /f "tokens=*" %%v in ('npm -v 2^>nul') do set "NPM_VER=%%v"
+echo [OK] Runtime Environment: Node.js %NODE_VER% ^| npm %NPM_VER%
+
+:: 3. Check and install dependencies if node_modules is missing
+if not exist "node_modules\" (
+    echo.
+    echo [INFO] First-time setup detected: 'node_modules' is missing.
+    echo [INFO] Installing required project dependencies via npm.cmd install...
+    echo.
     call npm.cmd install
     if %errorlevel% neq 0 (
         echo.
-        echo [ERROR] npm install encountered an error.
-        echo Please check your internet connection or install logs.
+        echo [ERROR] Dependency installation failed.
+        echo Please check your internet connection and verify write permissions.
         echo.
         pause
         exit /b %errorlevel%
     )
-    echo [INFO] Dependencies installed successfully.
     echo.
+    echo [OK] Dependencies installed successfully.
 )
 
-:: 4. Launch Electron Vite Development Mode
-echo [INFO] Launching HELIOXEN AI in development mode...
-echo [INFO] Vite dev server and Electron desktop window will start.
-echo [INFO] Press Ctrl+C in this window to stop the application.
+echo.
+echo Select an action (Auto-launching in 5 seconds...):
+echo   [1] Launch HELIOXEN AI Desktop App (Development Mode with HMR)
+echo   [2] Run Automated Test Suite (Vitest - 133 Unit/Integration Tests)
+echo   [3] Run TypeScript Typecheck (Node + Web validation)
+echo   [4] Build Production Application Bundle (electron-vite build)
+echo   [5] Clean Reinstall Dependencies (npm clean install)
+echo   [6] Exit Launcher
 echo.
 
-call npm.cmd run dev
+choice /c 123456 /t 5 /d 1 /m "Enter your choice [1-6]: "
+set "CHOICE_VAL=%errorlevel%"
 
+if "%CHOICE_VAL%"=="1" goto :RUN_DEV
+if "%CHOICE_VAL%"=="2" goto :RUN_TESTS
+if "%CHOICE_VAL%"=="3" goto :RUN_TYPECHECK
+if "%CHOICE_VAL%"=="4" goto :RUN_BUILD
+if "%CHOICE_VAL%"=="5" goto :REINSTALL
+if "%CHOICE_VAL%"=="6" goto :EXIT
+
+:RUN_DEV
+echo.
+echo ===============================================================================
+echo [INFO] Starting HELIOXEN AI Desktop Assistant (electron-vite dev)...
+echo [INFO] The Electron window and Three.js Central AI Core will open shortly.
+echo [INFO] Press Ctrl+C in this console window to terminate the application.
+echo ===============================================================================
+echo.
+call npm.cmd run dev
+goto :FINISH
+
+:RUN_TESTS
+echo.
+echo ===============================================================================
+echo [INFO] Running Vitest Automated Test Suite...
+echo ===============================================================================
+echo.
+call npm.cmd test
+goto :FINISH
+
+:RUN_TYPECHECK
+echo.
+echo ===============================================================================
+echo [INFO] Running TypeScript Typecheck (Node processes + Web renderer)...
+echo ===============================================================================
+echo.
+call npm.cmd run typecheck:node
+if %errorlevel% neq 0 goto :FINISH
+call npm.cmd run typecheck:web
+goto :FINISH
+
+:RUN_BUILD
+echo.
+echo ===============================================================================
+echo [INFO] Compiling production bundles (Main, Preload, and Renderer)...
+echo ===============================================================================
+echo.
+call npm.cmd run build
+goto :FINISH
+
+:REINSTALL
+echo.
+echo ===============================================================================
+echo [INFO] Reinstalling dependencies cleanly...
+echo ===============================================================================
+echo.
+call npm.cmd install
+goto :FINISH
+
+:FINISH
 if %errorlevel% neq 0 (
     echo.
-    echo [ERROR] Application terminated with exit code %errorlevel%.
-    pause
+    echo [NOTICE] Process ended with exit code %errorlevel%.
+) else (
+    echo.
+    echo [OK] Task completed successfully.
 )
+echo.
+pause
+exit /b 0
+
+:EXIT
+exit /b 0

@@ -1,152 +1,163 @@
-# HELIOXEN AI — Desktop Command Layer & Assistant
+# HELIOXEN AI — Desktop Command Center & Voice Assistant
 
-**Status:** Phase 2: Technical Architecture and Project Foundation (Step 5 of 48: Foundation Setup)  
-**Target Environment:** Windows 10/11 Desktop (64-bit)  
-**Primary UI/UX Reference:** Stonic AI (Clean 3-panel command layout + orbital AI core)  
-**License:** MIT (Original Clean-Room Implementation)  
+**Status:** Phase 7: Voice Input and Audio Interaction (Step 20 of 48: Real-Time Voice Sessions & Interruption)  
+**Operating System Target:** Windows 10 / Windows 11 (64-bit)  
+**Architecture:** Electron 32 + React 18 + TypeScript + Three.js + Web Audio + Windows DPAPI  
+**License:** MIT  
 
 ---
 
 ## 1. PROJECT OVERVIEW
 
-**HELIOXEN** is an original, cinematic desktop AI command assistant designed to act as an intelligent operating layer on Windows 10/11. It unites real-time conversational voice interaction, multimodal camera and screen understanding, local desktop automation, persistent long-term memory, and task-oriented agent orchestration.
-
-The interface prioritizes **calm visual simplicity** inspired by Stonic AI, complemented by a cinematic orbital visualizer reflecting the official HELIOXEN brand identity (neon cyan and deep orbital blue).
-
----
-
-## 2. CURRENT DEVELOPMENT STATUS
-
-The project has completed **Phase 1 (Product Definition & Requirements)** and is establishing **Phase 2 (Technical Foundation)**:
-- **Step 1:** Consolidated Requirements & Feature Prioritization (`FR-001` to `FR-090`, `NFR-001` to `NFR-025`) — `PASS`
-- **Step 2:** Reference Analysis, Clean-Room Policy & License Review — `PASS`
-- **Step 3:** Acceptance Criteria Framework & Security Threat Model — `PASS`
-- **Step 4:** Technology Stack Selection & Architecture Blueprint (`ADR-001` to `ADR-020`) — `PASS`
-- **Step 5 (Current):** Repository Initialization, Development Environment & Configuration.
-
-> [!NOTE]
-> The current application shell is a **minimal development bootstrap** confirming that the Electron, React, TypeScript, and Vite pipelines operate securely. The full Stonic-inspired 3-panel dashboard, custom titlebar, and Three.js Central AI Core will be implemented in subsequent roadmap steps (Steps 7–12).
+**HELIOXEN AI** is an intelligent, cinematic desktop AI command assistant designed as a unified operating layer for Windows. It integrates:
+- **Stonic-Inspired 3-Panel Workspace:** Clean, distraction-free command center with navigation rail, central core workspace, and collapsible contextual panel.
+- **Cinematic 3D Central AI Core:** Interactive Three.js particle and orbital visualizer that reacts in real-time to AI cognitive states (`idle`, `listening`, `thinking`, `speaking`, `error`).
+- **Real-Time Voice Sessions:** Explicit, privacy-preserving voice interaction pipeline featuring 16 kHz Mono PCM audio buffering, live provisional transcripts, dynamic 8-segment VU meters, and offline speech synthesis.
+- **Instantaneous User Interruption (<10ms):** Immediate cancellation of streaming generation and audio playback via keyboard (`Escape`) or the persistent voice dock.
+- **Hardware-Encrypted Credential Vault:** Secure local storage for Google Gemini and OpenAI API keys powered by Windows Data Protection API (DPAPI via `safeStorage`).
+- **Deterministic Model Router:** Intelligent task-based model selection, circuit-breaker health monitoring, and capability verification.
 
 ---
 
-## 3. CORE TECHNOLOGY STACK
+## 2. PREREQUISITES — WHAT YOU NEED TO DOWNLOAD
 
-- **Desktop Runtime:** Electron (v33+ LTS) on Node.js (v20+ / v22+ LTS).
-- **Build Tooling:** `electron-vite` with `vite`.
-- **Frontend Framework:** React with strict TypeScript.
-- **Styling:** Tailwind CSS with dynamic CSS design tokens.
-- **Security Baseline:** Renderer context isolation (`contextIsolation: true`), disabled Node integration (`nodeIntegration: false`), Chromium sandboxing (`sandbox: true`), and strict Content Security Policy (CSP).
-- **Credentials:** Windows Data Protection API (DPAPI via `safeStorage`).
-- **Local Database:** `better-sqlite3` with Write-Ahead Logging (`WAL` mode).
+Before running HELIOXEN AI, ensure you have the following software installed:
 
----
+### Required Software:
+1. **Node.js (LTS Version 20.x, 22.x, or 24.x):**
+   - **Download:** [https://nodejs.org/](https://nodejs.org/)
+   - **Installation Note:** Download the **LTS (Recommended for Most Users)** 64-bit Windows installer (`.msi`). During installation, ensure the box **"Add to PATH"** is checked.
+   - **Verification:** Open PowerShell or Command Prompt and run:
+     ```cmd
+     node -v
+     npm -v
+     ```
+     You should see versions like `v20.x.x` (or newer) and `10.x.x` (or newer).
 
-## 4. HOW TO RUN & DEVELOPMENT WORKFLOW
-
-### Prerequisites
-- **Node.js:** v20.x, v22.x, or v26.x LTS (64-bit).
-- **Package Manager:** npm (v10+ or v11+).
-- **Operating System:** Windows 10 or 11 (64-bit).
-
----
-
-### Option A: One-Click Quick Launch (`run.bat`) — Recommended for Windows
-
-The easiest way to start HELIOXEN AI is using the bundled **`run.bat`** launcher:
-
-1. **Double-click `run.bat`** in the project folder (or execute `.\run.bat` in PowerShell / Command Prompt).
-2. The launcher will automatically:
-   - Verify Node.js and npm are installed in your PATH.
-   - Automatically run `npm install` if `node_modules` is missing.
-   - Launch the Vite development server and open the Electron desktop application window.
-3. To stop the application, press `Ctrl+C` in the launcher console window.
+### Recommended / Optional Components:
+2. **Git for Windows (Optional):**
+   - **Download:** [https://git-scm.com/](https://git-scm.com/)
+   - Useful for version control and pulling repository updates.
+3. **Microphone (Optional, for Voice Sessions):**
+   - Any standard USB microphone, Bluetooth headset, or laptop built-in microphone for real-time voice capture and audio VU metering.
+4. **Speakers or Headphones:**
+   - For offline local speech synthesis playback.
+5. **AI Provider API Key (Optional, for Live Online Reasoning):**
+   - **Google Gemini API Key:** Free tier available at [Google AI Studio](https://aistudio.google.com/).
+   - **OpenAI API Key:** Available at [OpenAI Platform](https://platform.openai.com/api-keys).
+   - *(Note: You do not need to configure keys in files or environment variables; you can paste them directly into the in-app Settings UI, where they are encrypted with Windows DPAPI).*
 
 ---
 
-### Option B: Manual Command-Line Workflow
+## 3. HOW TO RUN
 
-If you prefer using the terminal (Command Prompt, PowerShell, or Windows Terminal):
+### Method 1: One-Click Quick Launch (`run.bat`) — Recommended
 
-1. **Install Dependencies:**
-   ```powershell
-   npm install
+The easiest way to start the application on Windows:
+
+1. Navigate to the project root folder:
    ```
-   *(Note for PowerShell users: if you experience an execution policy error with `npm`, run `npm.cmd install`)*
-
-2. **Launch Development Application:**
-   ```powershell
-   npm run dev
+   d:\App Winrar Files\Helioxen Ai Assistant (working)\
    ```
-   *(Or `npm.cmd run dev`)*
-   This starts the Vite HMR server and launches the Electron desktop window.
-
-3. **Verify Type Checking:**
-   ```powershell
-   npm run typecheck
-   ```
-   Validates type safety across Node processes (main/preload) and browser process (renderer).
-
-4. **Production Build:**
-   ```powershell
-   npm run build
-   ```
-   Compiles and packages production bundles into the `out/` directory.
+2. **Double-click `run.bat`** (or open Command Prompt and execute `run.bat`).
+3. The launcher will automatically:
+   - Confirm Node.js and npm are installed in your PATH.
+   - Check for `node_modules` and automatically run `npm install` if launching for the first time.
+   - Present a quick menu and **automatically launch development mode in 5 seconds** (or press `1` immediately).
+4. The desktop Electron window with the glowing orbital AI core will open automatically.
+5. To stop the application, close the desktop window or press `Ctrl+C` in the launcher console.
 
 ---
 
-### What to Expect on First Launch
-When launched, HELIOXEN AI opens a secure desktop window displaying the **Step 5 Development Bootstrap Status Screen**:
-- Confirms Electron v33+, React 18, and Vite 5 runtime operational status.
-- Validates that Electron security settings (`contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`, strict CSP) are active.
-- Confirms the environment is ready for subsequent roadmap implementation steps (custom titlebar, Stonic-style 3-panel layout, and 3D Central AI Core).
+### Method 2: Manual Terminal Workflow (PowerShell / Command Prompt)
+
+If you prefer using your terminal:
+
+1. **Open your terminal in the project directory:**
+   ```powershell
+   cd "d:\App Winrar Files\Helioxen Ai Assistant (working)"
+   ```
+
+2. **Install Project Dependencies (First Time Only):**
+   ```powershell
+   npm.cmd install
+   ```
+   *(Note: On Windows PowerShell, use `npm.cmd` to bypass any PowerShell execution policy restrictions).*
+
+3. **Launch in Development Mode (with Hot-Module Reloading):**
+   ```powershell
+   npm.cmd run dev
+   ```
+   This will spin up the Vite development server and open the Electron desktop app.
+
+4. **Run the Automated Test Suite (133 Tests Across 23 Suites):**
+   ```powershell
+   npm.cmd test
+   ```
+
+5. **Run TypeScript Typechecks:**
+   ```powershell
+   npm.cmd run typecheck:node
+   npm.cmd run typecheck:web
+   ```
+
+6. **Compile Production Distribution Bundles:**
+   ```powershell
+   npm.cmd run build
+   ```
 
 ---
 
-### Troubleshooting Common Issues
-- **PowerShell Script Policy Error (`npm.ps1 cannot be loaded`):**
-  Use `run.bat` or run `npm.cmd run dev` instead of `npm run dev`.
-- **Port Conflict (Vite Dev Server):**
-  If port 5173 is in use, Vite will automatically switch to the next available port (e.g. 5174).
-- **Node.js Not Found:**
-  Ensure Node.js is installed and the box "Add to PATH" was selected during Node.js setup. Restart your terminal after installing.
+## 4. APPLICATION INTERACTION GUIDE
+
+Once the HELIOXEN window opens:
+
+### 1. Navigation (Left Rail)
+- **AI Core (`Alt+1`):** Return to the main command center with the central 3D orbital visualizer and conversation panel.
+- **Workspace (`Alt+2`):** Project files, command execution, and task automation.
+- **Settings (`Alt+3`):** Configure your Google Gemini or OpenAI API keys, select active models, and configure task-based model routing.
+- **Diagnostics (`Alt+4`):** Check provider health, latency, circuit-breaker states, and hardware permissions.
+
+### 2. Interactive Voice Dock (Bottom Bar)
+- **"Voice Session" Button:** Starts a real-time conversational voice session. Speaks and listens interactively.
+- **"Interrupt (Esc)" Button:** While the assistant is listening, thinking, or speaking, clicking this button or pressing the **`Escape`** key instantly stops playback, cancels in-flight AI generation, and tags the turn as interrupted (<10ms latency).
+- **Dynamic 8-Segment Audio VU Meter:** Displays real-time audio energy captured from your microphone.
+- **Hardware Device Dropdown:** Click the microphone selector to switch between available input devices.
+- **Raw Mic Capture Toggle:** Tests microphone hardware stream isolation.
+- **Test Speech Button:** Tests local speech synthesis output.
+
+### 3. Setting Up Your AI API Keys (Optional)
+1. Click the **Settings** icon on the left rail.
+2. Under **AI Providers & API Credentials**, paste your **Google Gemini** or **OpenAI** API key.
+3. Click **"Save API Key"**. The key is immediately encrypted using Windows DPAPI and stored locally.
+4. Return to the Command Center and start chatting!
 
 ---
 
-## 5. REPOSITORY ARCHITECTURE
+## 5. TROUBLESHOOTING COMMON ISSUES
+
+- **Issue: `node` is not recognized as an internal or external command:**
+  - **Fix:** Install Node.js from [nodejs.org](https://nodejs.org/) and make sure the checkbox "Add to PATH" is checked during setup. Close and reopen your terminal or launcher.
+- **Issue: PowerShell execution policy error (`npm.ps1 cannot be loaded because running scripts is disabled`):**
+  - **Fix:** Always use `npm.cmd` instead of `npm`, or run `run.bat` directly.
+- **Issue: Microphone Permission Denied:**
+  - **Fix:** Open Windows Settings ➔ Privacy & Security ➔ Microphone ➔ Ensure "Let desktop apps access your microphone" is set to **On**.
+- **Issue: Port 5173 is already in use:**
+  - **Fix:** Vite automatically detects busy ports and will fall back to port 5174 or 5175 without failing.
+
+---
+
+## 6. PROJECT REPOSITORY STRUCTURE
 
 ```
 HELIOXEN/
-├── docs/
-│   ├── development/
-│   │   ├── DEVELOPMENT_ENVIRONMENT.md
-│   │   └── FOUNDATION_DECISIONS.md
-│   ├── HELIOXEN_PRODUCT_REQUIREMENTS.md
-│   ├── HELIOXEN_FEATURE_PRIORITIZATION.md
-│   ├── HELIOXEN_CLEAN_ROOM_IMPLEMENTATION_POLICY.md
-│   ├── HELIOXEN_ACCEPTANCE_CRITERIA.md
-│   ├── HELIOXEN_THREAT_MODEL.md
-│   ├── HELIOXEN_TECH_STACK_DECISION.md
-│   └── HELIOXEN_SYSTEM_ARCHITECTURE.md
 ├── src/
-│   ├── main/          # Privileged Electron main process
-│   ├── preload/       # Strictly typed, sandboxed contextBridge
-│   └── renderer/      # React 18/19 UI and rendering pipeline
-├── electron.vite.config.ts
-├── package.json
-├── package-lock.json
-├── tsconfig.json
-├── LICENSE
-├── run.bat            # One-click Windows development launcher
-└── README.md
+│   ├── main/                 # Electron main process (DPAPI vault, model router, IPC)
+│   ├── preload/              # Secure contextBridge preload scripts and typed API
+│   ├── renderer/             # React 18 UI components, Three.js AI Core, Voice Dock
+│   └── shared/               # Shared TypeScript types, Zod contracts, and schemas
+├── docs/                     # Complete architecture specifications & ADRs
+├── tests/                    # 133 automated unit and integration tests (Vitest)
+├── run.bat                   # One-click Windows desktop application launcher
+└── package.json              # Project dependencies and script definitions
 ```
-
----
-
-## 6. CLEAN-ROOM & SECURITY COMPLIANCE
-
-HELIOXEN adheres to strict clean-room engineering policies:
-- **100% Original Code:** Zero source code, schemas, or non-free assets are copied from reference projects (Stonic, Brahma, IRIS).
-- **Zero Plaintext Secrets:** API keys are never stored in plaintext configuration files or Git commits.
-- **Zero Raw Shell Tools:** Raw unrestricted bash/powershell tools are permanently banned.
-
-For detailed architecture and security specifications, refer to the documentation in [`docs/`](./docs).
