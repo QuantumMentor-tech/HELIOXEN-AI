@@ -105,6 +105,8 @@ export interface HelioxenRoutingApi {
 }
 
 import { AudioPermissionStatus, AudioDeviceInfo } from '../shared/audio/types'
+import { UserVoicePreferences } from '../shared/voice/types'
+import { DesktopDisplaySource, CapturePermissionStatus } from '../shared/capture/types'
 
 export interface HelioxenAudioApi {
   /**
@@ -115,6 +117,58 @@ export interface HelioxenAudioApi {
    * Enumerates connected microphone hardware input devices.
    */
   getDevices: () => Promise<AudioDeviceInfo[]>
+}
+
+export interface HelioxenVoiceApi {
+  /**
+   * Retrieves persisted voice, audio quality, and wake-word preferences.
+   */
+  getPreferences: () => Promise<UserVoicePreferences>
+  /**
+   * Persists updated voice preferences.
+   */
+  setPreferences: (preferences: Partial<UserVoicePreferences>) => Promise<UserVoicePreferences>
+}
+
+export interface HelioxenCaptureApi {
+  /**
+   * Enumerates active displays and application windows for explicit user-initiated display capture.
+   */
+  getDesktopSources: (types?: ('screen' | 'window')[]) => Promise<DesktopDisplaySource[]>
+  /**
+   * Queries OS media access permission for camera or display capture.
+   */
+  checkPermission: (sourceType: 'camera' | 'screen') => Promise<CapturePermissionStatus>
+}
+
+import {
+  FileAttachment,
+  DocumentExtractionResult,
+  DocumentValidationResult
+} from '../shared/documents/types'
+
+export interface HelioxenDocumentsApi {
+  /**
+   * Opens native OS file picker to select supported document or image files.
+   */
+  selectFiles: (options?: { multiple?: boolean; maxCount?: number }) => Promise<FileAttachment[]>
+  /**
+   * Extracts normalized content from a selected file reference or buffer.
+   */
+  extractFile: (
+    attachmentId: string,
+    fileName: string,
+    filePath?: string,
+    fileBuffer?: Uint8Array
+  ) => Promise<DocumentExtractionResult>
+  /**
+   * Validates file size and format against security bounds.
+   */
+  validateFile: (metadata: {
+    name: string
+    sizeBytes: number
+    mimeType?: string
+  }) => Promise<DocumentValidationResult>
 }
 
 export interface HelioxenApi {
@@ -140,4 +194,76 @@ export interface HelioxenApi {
   readonly routing: HelioxenRoutingApi
   /** Local audio device discovery and permission operations */
   readonly audio: HelioxenAudioApi
+  /** Voice preferences and wake-word configuration */
+  readonly voice: HelioxenVoiceApi
+  /** Camera and desktop screen capture operations (Phase 8 Step 22) */
+  readonly capture: HelioxenCaptureApi
+  /** Document extraction & file attachment operations (Phase 8 Step 23) */
+  readonly documents: HelioxenDocumentsApi
+  /** Tool registry and typed schema operations (Phase 9 Step 25) */
+  readonly tools: HelioxenToolsApi
+  /** Task planner and multi-step agent orchestration operations (Phase 9 Step 26) */
+  readonly orchestration: HelioxenOrchestrationApi
+}
+
+import {
+  ToolMetadata,
+  ToolQueryFilter,
+  ToolValidationResult
+} from '../shared/tools/types'
+import {
+  TaskPlan,
+  TaskPlannerRequest,
+  TaskPlannerResponse,
+  TaskExecutionResult,
+  TaskProgressEvent,
+  AuditEvent,
+  TaskCancellationRequest,
+  TaskCancellationResult,
+  TaskRecord
+} from '../shared/orchestration/types'
+
+export interface HelioxenToolsApi {
+  /**
+   * Queries registered tool definitions and metadata.
+   */
+  list: (filter?: ToolQueryFilter) => Promise<ToolMetadata[]>
+  /**
+   * Resolves a tool definition by stable identifier.
+   */
+  get: (id: string) => Promise<ToolMetadata | null>
+  /**
+   * Validates an untrusted payload against a registered tool's input schema.
+   */
+  validateInput: (id: string, input: unknown) => Promise<ToolValidationResult>
+}
+
+export interface HelioxenOrchestrationApi {
+  /**
+   * Converts an authorized user request into a structured task plan.
+   */
+  plan: (request: TaskPlannerRequest) => Promise<TaskPlannerResponse>
+  /**
+   * Executes a validated multi-step plan through registered tools under security gates.
+   */
+  execute: (
+    plan: TaskPlan,
+    options?: { approvedConfirmations?: string[] }
+  ) => Promise<TaskExecutionResult>
+  /**
+   * Requests cooperative cancellation of an active task.
+   */
+  cancel: (request: TaskCancellationRequest) => Promise<TaskCancellationResult>
+  /**
+   * Queries the execution audit trail for a task.
+   */
+  getAudit: (taskId: string) => Promise<readonly AuditEvent[]>
+  /**
+   * Queries current task state record.
+   */
+  getTask: (taskId: string) => Promise<TaskRecord | null>
+  /**
+   * Subscribes to real-time monotonic progress events from the execution engine.
+   */
+  onProgress: (listener: (event: TaskProgressEvent) => void) => () => void
 }

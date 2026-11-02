@@ -43,6 +43,47 @@ export class OpenAiAdapter implements AiProviderAdapter {
     return requestedModel
   }
 
+  private prepareOpenAiMessages(request: AiGenerationRequest): OpenAI.Chat.Completions.ChatCompletionMessageParam[] {
+    return request.messages.map((m: AiMessage, index: number) => {
+      const isLastUserMsg = index === request.messages.length - 1 && m.role === 'user'
+
+      let messageText = m.content
+      const docContext = m.documentContext || (isLastUserMsg ? request.documentContext : undefined)
+      if (docContext && docContext.length > 0) {
+        const docBlocks = docContext
+          .map((doc) => `[DOCUMENT ATTACHMENT: ${doc.filename}]\n${doc.text}\n[/DOCUMENT ATTACHMENT]`)
+          .join('\n\n')
+        messageText = `${docBlocks}\n\n${messageText}`
+      }
+
+      const imageAtt = m.imageAttachment || (isLastUserMsg ? request.imageAttachment : undefined)
+
+      if (imageAtt && m.role === 'user') {
+        const contentParts: OpenAI.Chat.Completions.ChatCompletionContentPart[] = [
+          { type: 'text', text: messageText },
+          {
+            type: 'image_url',
+            image_url: {
+              url: imageAtt.dataUrl
+            }
+          }
+        ]
+        return {
+          role: 'user',
+          content: contentParts
+        }
+      }
+
+      if (m.role === 'system') {
+        return { role: 'system', content: messageText }
+      } else if (m.role === 'assistant') {
+        return { role: 'assistant', content: messageText }
+      } else {
+        return { role: 'user', content: messageText }
+      }
+    })
+  }
+
   public async generateText(
     request: AiGenerationRequest,
     apiKey: string,
@@ -63,10 +104,7 @@ export class OpenAiAdapter implements AiProviderAdapter {
       const completion = await client.chat.completions.create(
         {
           model,
-          messages: request.messages.map((m: AiMessage) => ({
-            role: m.role,
-            content: m.content
-          })),
+          messages: this.prepareOpenAiMessages(request),
           temperature: request.temperature,
           max_tokens: request.maxTokens
         },
@@ -117,10 +155,7 @@ export class OpenAiAdapter implements AiProviderAdapter {
       const stream = await client.chat.completions.create(
         {
           model,
-          messages: request.messages.map((m: AiMessage) => ({
-            role: m.role,
-            content: m.content
-          })),
+          messages: this.prepareOpenAiMessages(request),
           temperature: request.temperature,
           max_tokens: request.maxTokens,
           stream: true

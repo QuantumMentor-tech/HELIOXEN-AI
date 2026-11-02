@@ -294,6 +294,156 @@ export const CAPABILITIES: Record<string, CapabilityDefinition> = {
     requiresHumanConsent: true,
     status: 'active'
   },
+  'voice:preferencesGet': {
+    id: 'voice:preferencesGet',
+    name: 'Query Voice Preferences',
+    description: 'Retrieves persisted voice, audio quality, and wake-word preferences.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'voice:preferencesSet': {
+    id: 'voice:preferencesSet',
+    name: 'Update Voice Preferences',
+    description: 'Persists user voice settings, audio quality parameters, and wake-word configuration.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'voice:wakeWordMonitoring': {
+    id: 'voice:wakeWordMonitoring',
+    name: 'Local Wake-Word Monitoring',
+    description: 'Executes on-device acoustic keyword spotting for explicit wake-word activation (Phase 7, Step 21).',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: true,
+    status: 'active'
+  },
+
+  // --- Multimodal Input & Context (Phase 8, Step 22-23) ---
+  'capture:getSources': {
+    id: 'capture:getSources',
+    name: 'Enumerate Desktop Display Sources',
+    description: 'Enumerates active screens and windows for explicit user-initiated display capture.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: true,
+    status: 'active'
+  },
+  'capture:checkPermission': {
+    id: 'capture:checkPermission',
+    name: 'Query Media Capture Permission',
+    description: 'Queries OS media access permission for camera or screen capture.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'documents:select': {
+    id: 'documents:select',
+    name: 'Select Document Files',
+    description: 'Opens native file selection dialog for user-approved document attachments.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'documents:extract': {
+    id: 'documents:extract',
+    name: 'Extract Document Content',
+    description: 'Safely extracts normalized text from authorized document formats (.txt, .md, .pdf, .docx).',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'documents:validate': {
+    id: 'documents:validate',
+    name: 'Validate Document File',
+    description: 'Validates document size, format, and structure against security bounds.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+
+  // --- Tool Registry & Schema Capabilities (Phase 9, Step 25) ---
+  'tools:list': {
+    id: 'tools:list',
+    name: 'Query Tool Registry',
+    description: 'Queries available tool definitions and capability requirements.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'tools:get': {
+    id: 'tools:get',
+    name: 'Resolve Tool Definition',
+    description: 'Retrieves complete metadata for an approved registered tool identifier.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'tools:validate': {
+    id: 'tools:validate',
+    name: 'Validate Tool Payload',
+    description: 'Validates candidate tool input or output payloads against registered typed schemas.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'workspace:readContext': {
+    id: 'workspace:readContext',
+    name: 'Read Workspace Context Summary',
+    description: 'Reads aggregated conversation context statistics and active source metrics.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+
+  // --- Task Planner & Orchestration Capabilities (Phase 9, Step 26) ---
+  'orchestration:plan': {
+    id: 'orchestration:plan',
+    name: 'Plan Agent Task',
+    description: 'Analyzes user requests and constructs structured, dependency-checked task plans.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'orchestration:execute': {
+    id: 'orchestration:execute',
+    name: 'Execute Multi-Step Plan',
+    description: 'Coordinates and dispatches validated multi-step tool plans under capability and consent gates.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'orchestration:cancel': {
+    id: 'orchestration:cancel',
+    name: 'Cancel Agent Task',
+    description: 'Requests cooperative cancellation and resource cleanup for active tasks.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'orchestration:audit': {
+    id: 'orchestration:audit',
+    name: 'Inspect Execution Audit Trail',
+    description: 'Queries sanitized execution lifecycle events and verification history.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
 
   // --- Permanently Prohibited Capabilities ---
   'shell:execute': {

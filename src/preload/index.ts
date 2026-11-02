@@ -9,9 +9,19 @@ import {
   HelioxenPreferencesApi,
   HelioxenHealthApi,
   HelioxenRoutingApi,
-  HelioxenAudioApi
+  HelioxenAudioApi,
+  HelioxenVoiceApi,
+  HelioxenCaptureApi,
+  HelioxenDocumentsApi
 } from './types'
 import { AudioPermissionStatus, AudioDeviceInfo } from '../shared/audio/types'
+import { UserVoicePreferences } from '../shared/voice/types'
+import { DesktopDisplaySource, CapturePermissionStatus } from '../shared/capture/types'
+import {
+  FileAttachment,
+  DocumentExtractionResult,
+  DocumentValidationResult
+} from '../shared/documents/types'
 import {
   AiProviderId,
   AiGenerationRequest,
@@ -127,6 +137,106 @@ const audioApi: HelioxenAudioApi = Object.freeze({
   }
 })
 
+const voiceApi: HelioxenVoiceApi = Object.freeze({
+  getPreferences: (): Promise<UserVoicePreferences> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.VOICE_PREFERENCES_GET)
+  },
+  setPreferences: (preferences: Partial<UserVoicePreferences>): Promise<UserVoicePreferences> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.VOICE_PREFERENCES_SET, preferences)
+  }
+})
+
+const captureApi: HelioxenCaptureApi = Object.freeze({
+  getDesktopSources: (types: ('screen' | 'window')[] = ['screen', 'window']): Promise<DesktopDisplaySource[]> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.CAPTURE_GET_DESKTOP_SOURCES, { types })
+  },
+  checkPermission: (sourceType: 'camera' | 'screen'): Promise<CapturePermissionStatus> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.CAPTURE_CHECK_PERMISSION, { sourceType })
+  }
+})
+
+const documentsApi: HelioxenDocumentsApi = Object.freeze({
+  selectFiles: (options?: { multiple?: boolean; maxCount?: number }): Promise<FileAttachment[]> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.DOCUMENTS_SELECT_FILES, options)
+  },
+  extractFile: (
+    attachmentId: string,
+    fileName: string,
+    filePath?: string,
+    fileBuffer?: Uint8Array
+  ): Promise<DocumentExtractionResult> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.DOCUMENTS_EXTRACT_FILE, {
+      attachmentId,
+      fileName,
+      filePath,
+      fileBuffer
+    })
+  },
+  validateFile: (metadata: {
+    name: string
+    sizeBytes: number
+    mimeType?: string
+  }): Promise<DocumentValidationResult> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.DOCUMENTS_VALIDATE_FILE, metadata)
+  }
+})
+
+import { HelioxenToolsApi, HelioxenOrchestrationApi } from './types'
+import { ToolMetadata, ToolQueryFilter, ToolValidationResult } from '../shared/tools/types'
+import {
+  TaskPlan,
+  TaskPlannerRequest,
+  TaskPlannerResponse,
+  TaskExecutionResult,
+  TaskProgressEvent,
+  AuditEvent,
+  TaskCancellationRequest,
+  TaskCancellationResult,
+  TaskRecord
+} from '../shared/orchestration/types'
+
+const toolsApi: HelioxenToolsApi = Object.freeze({
+  list: (filter?: ToolQueryFilter): Promise<ToolMetadata[]> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.TOOLS_LIST, filter)
+  },
+  get: (id: string): Promise<ToolMetadata | null> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.TOOLS_GET, { id })
+  },
+  validateInput: (id: string, input: unknown): Promise<ToolValidationResult> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.TOOLS_VALIDATE_INPUT, { id, input })
+  }
+})
+
+const orchestrationApi: HelioxenOrchestrationApi = Object.freeze({
+  plan: (request: TaskPlannerRequest): Promise<TaskPlannerResponse> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.ORCHESTRATION_PLAN, request)
+  },
+  execute: (
+    plan: TaskPlan,
+    options?: { approvedConfirmations?: string[] }
+  ): Promise<TaskExecutionResult> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.ORCHESTRATION_EXECUTE, { plan, ...options })
+  },
+  cancel: (request: TaskCancellationRequest): Promise<TaskCancellationResult> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.ORCHESTRATION_CANCEL, request)
+  },
+  getAudit: (taskId: string): Promise<readonly AuditEvent[]> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.ORCHESTRATION_GET_AUDIT, { taskId })
+  },
+  getTask: (taskId: string): Promise<TaskRecord | null> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.ORCHESTRATION_GET_TASK, { taskId })
+  },
+  onProgress: (listener: (event: TaskProgressEvent) => void): (() => void) => {
+    const handler = (_ipcEvent: unknown, event: TaskProgressEvent): void => {
+      listener(event)
+    }
+    ipcRenderer.on(IPC_CHANNELS.ORCHESTRATION_PROGRESS_EVENT, handler)
+    return () => {
+      ipcRenderer.removeListener(IPC_CHANNELS.ORCHESTRATION_PROGRESS_EVENT, handler)
+    }
+  }
+})
+
 const helioxenApi: HelioxenApi = Object.freeze({
   platform: process.platform,
   environment: process.env.NODE_ENV || 'development',
@@ -138,7 +248,12 @@ const helioxenApi: HelioxenApi = Object.freeze({
   preferences: preferencesApi,
   health: healthApi,
   routing: routingApi,
-  audio: audioApi
+  audio: audioApi,
+  voice: voiceApi,
+  capture: captureApi,
+  documents: documentsApi,
+  tools: toolsApi,
+  orchestration: orchestrationApi
 })
 
 try {

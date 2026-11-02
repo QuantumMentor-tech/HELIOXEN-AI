@@ -1,5 +1,6 @@
-import { app, BrowserWindow, shell, session, ipcMain, IpcMainInvokeEvent, systemPreferences } from 'electron'
-import { join } from 'path'
+import { app, BrowserWindow, shell, session, ipcMain, IpcMainInvokeEvent, systemPreferences, desktopCapturer, dialog } from 'electron'
+import path, { join } from 'path'
+import * as fs from 'fs'
 import {
   IPC_CHANNELS,
   IpcException,
@@ -19,15 +20,37 @@ import {
   UserAiPreferencesSchema,
   TASK_DEFINITIONS
 } from '../shared/ai'
+import { UserVoicePreferencesSchema } from '../shared/voice/contracts'
+import { DesktopSourcesRequestSchema } from '../shared/capture/contracts'
+import {
+  SelectFilesRequestSchema,
+  ExtractFileRequestSchema,
+  detectDocumentFormat,
+  DEFAULT_DOCUMENT_LIMITS,
+  FileAttachment
+} from '../shared/documents'
 import { authorizer, securityLogger, CredentialStorageService } from './security'
 import { ProviderService, ModelRegistry, PreferencesStorage } from './ai'
+import { VoicePreferencesStorage } from './voice/VoicePreferencesStorage'
+import { DocumentExtractionService } from './documents'
+import { mainToolRegistry } from './tools'
+import { mainTaskPlanner, mainExecutionEngine } from './orchestration'
 
 // Global window reference
 let mainWindow: BrowserWindow | null = null
 let providerService: ProviderService | null = null
 let modelRegistry: ModelRegistry | null = null
 let preferencesStorage: PreferencesStorage | null = null
+let voicePreferencesStorage: VoicePreferencesStorage | null = null
+let documentExtractionService: DocumentExtractionService | null = null
 let activeStreamAbortController: AbortController | null = null
+
+export function getDocumentExtractionService(): DocumentExtractionService {
+  if (!documentExtractionService) {
+    documentExtractionService = new DocumentExtractionService()
+  }
+  return documentExtractionService
+}
 
 export function getModelRegistry(): ModelRegistry {
   if (!modelRegistry) {
@@ -44,6 +67,15 @@ export function getPreferencesStorage(): PreferencesStorage {
     )
   }
   return preferencesStorage
+}
+
+export function getVoicePreferencesStorage(): VoicePreferencesStorage {
+  if (!voicePreferencesStorage) {
+    voicePreferencesStorage = new VoicePreferencesStorage(
+      join(app.getPath('userData'), 'voice_preferences.json')
+    )
+  }
+  return voicePreferencesStorage
 }
 
 export function getProviderService(): ProviderService {
@@ -280,6 +312,195 @@ export function registerAiAndCredentialIpcHandlers(): void {
     authorizer.authorize('audio:getDevices', { requester: 'renderer-main-window' })
     return []
   })
+
+  ipcMain.handle(IPC_CHANNELS.VOICE_PREFERENCES_GET, async (event) => {
+    assertValidSender(event)
+    authorizer.authorize('voice:preferencesGet', { requester: 'renderer-main-window' })
+    return getVoicePreferencesStorage().getPreferences()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.VOICE_PREFERENCES_SET, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('voice:preferencesSet', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(UserVoicePreferencesSchema, payload)
+    return getVoicePreferencesStorage().setPreferences(valid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.CAPTURE_GET_DESKTOP_SOURCES, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('capture:getSources', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(DesktopSourcesRequestSchema, payload || { types: ['screen', 'window'] })
+    try {
+      const sources = await desktopCapturer.getSources({
+        types: valid.types,
+        thumbnailSize: { width: 320, height: 180 },
+        fetchWindowIcons: true
+      })
+      return sources.map((src) => ({
+        id: src.id,
+        name: src.name,
+        thumbnailDataUrl: src.thumbnail ? src.thumbnail.toDataURL() : undefined,
+        displayId: src.display_id,
+        isAppWindow: src.id.startsWith('window:')
+      }))
+    } catch (err) {
+      console.warn('[Main] Failed to enumerate desktop display sources:', err)
+      return []
+    }
+  })
+
+  ipcMain.handle(IPC_CHANNELS.CAPTURE_CHECK_PERMISSION, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('capture:checkPermission', { requester: 'renderer-main-window' })
+    try {
+      const targetType = payload?.sourceType === 'screen' ? 'screen' : 'camera'
+      if (typeof systemPreferences.getMediaAccessStatus === 'function') {
+        const status = systemPreferences.getMediaAccessStatus(targetType)
+        return status
+      }
+      return 'granted'
+    } catch {
+      return 'unsupported'
+    }
+  })
+
+  // Document Extraction & File Attachment Operations (Renderer -> Main, Phase 8 Step 23)
+  ipcMain.handle(IPC_CHANNELS.DOCUMENTS_SELECT_FILES, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('documents:select', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(SelectFilesRequestSchema, payload || {})
+
+    const result = await dialog.showOpenDialog(mainWindow!, {
+      title: 'Select Supported Document or Image Files',
+      properties: valid.multiple ? ['openFile', 'multiSelections'] : ['openFile'],
+      filters: [
+        { name: 'All Supported Files', extensions: ['txt', 'md', 'pdf', 'docx', 'png', 'jpg', 'jpeg', 'webp'] },
+        { name: 'Documents', extensions: ['txt', 'md', 'pdf', 'docx'] },
+        { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp'] }
+      ]
+    })
+
+    if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+      return []
+    }
+
+    const selectedPaths = result.filePaths.slice(0, valid.maxCount)
+    const attachments: FileAttachment[] = []
+
+    for (const filePath of selectedPaths) {
+      try {
+        const stat = await fs.promises.stat(filePath)
+        const fileName = path.basename(filePath)
+        const format = detectDocumentFormat(fileName) || 'txt'
+        let imagePreviewUrl: string | undefined
+
+        if (format === 'image' && stat.size <= 4 * 1024 * 1024) {
+          const buf = await fs.promises.readFile(filePath)
+          const ext = path.extname(fileName).toLowerCase().replace('.', '')
+          const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg'
+          imagePreviewUrl = `data:${mime};base64,${buf.toString('base64')}`
+        }
+
+        const isOversized = stat.size > DEFAULT_DOCUMENT_LIMITS.maxFileSizeBytes
+
+        attachments.push({
+          id: `att-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+          name: fileName,
+          format,
+          mimeType: format === 'image' ? (path.extname(fileName).toLowerCase().includes('png') ? 'image/png' : 'image/jpeg') : 'application/octet-stream',
+          sizeBytes: stat.size,
+          status: isOversized ? 'validation-failed' : 'selected',
+          imagePreviewUrl,
+          errorDetails: isOversized ? {
+            code: 'PAYLOAD_OVERSIZED',
+            message: `File exceeds 10MB limit (${Math.round(stat.size / (1024 * 1024))}MB)`,
+            recoverable: false
+          } : undefined,
+          timestamp: Date.now(),
+          filePath
+        })
+      } catch (err) {
+        console.warn('[Main] Failed to process selected file path:', filePath, err)
+      }
+    }
+
+    return attachments
+  })
+
+  ipcMain.handle(IPC_CHANNELS.DOCUMENTS_EXTRACT_FILE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('documents:extract', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(ExtractFileRequestSchema, payload)
+    const service = getDocumentExtractionService()
+
+    return service.extract(
+      valid.attachmentId,
+      valid.fileName,
+      valid.filePath || valid.fileBuffer!,
+      valid.format
+    )
+  })
+
+  ipcMain.handle(IPC_CHANNELS.DOCUMENTS_VALIDATE_FILE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('documents:validate', { requester: 'renderer-main-window' })
+    const service = getDocumentExtractionService()
+    return service.validate(payload?.name, payload?.sizeBytes, payload?.mimeType)
+  })
+
+  // Tool Registry Handlers (Phase 9 Step 25)
+  ipcMain.handle(IPC_CHANNELS.TOOLS_LIST, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('tools:list', { requester: 'renderer-main-window' })
+    return mainToolRegistry.list(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.TOOLS_GET, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('tools:get', { requester: 'renderer-main-window' })
+    if (!payload?.id) return null
+    return mainToolRegistry.getMetadata(payload.id) || null
+  })
+
+  ipcMain.handle(IPC_CHANNELS.TOOLS_VALIDATE_INPUT, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('tools:validate', { requester: 'renderer-main-window' })
+    return mainToolRegistry.validateInput(payload?.id, payload?.input)
+  })
+
+  // Task Planner & Agent Orchestration Handlers (Phase 9 Step 26-27)
+  ipcMain.handle(IPC_CHANNELS.ORCHESTRATION_PLAN, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('orchestration:plan', { requester: 'renderer-main-window' })
+    return mainTaskPlanner.planTask(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.ORCHESTRATION_EXECUTE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('orchestration:execute', { requester: 'renderer-main-window' })
+    const approvedConfirmations = payload?.approvedConfirmations
+      ? new Set<string>(payload.approvedConfirmations)
+      : undefined
+    return mainExecutionEngine.executePlan(payload?.plan, { approvedConfirmations })
+  })
+
+  ipcMain.handle(IPC_CHANNELS.ORCHESTRATION_CANCEL, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('orchestration:cancel', { requester: 'renderer-main-window' })
+    return mainExecutionEngine.requestCancellation(payload?.taskId, payload?.reason)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.ORCHESTRATION_GET_AUDIT, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('orchestration:audit', { requester: 'renderer-main-window' })
+    return mainExecutionEngine.getTaskAudit(payload?.taskId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.ORCHESTRATION_GET_TASK, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('orchestration:plan', { requester: 'renderer-main-window' })
+    return mainExecutionEngine.getTask(payload?.taskId) || null
+  })
 }
 
 /**
@@ -298,21 +519,22 @@ function createWindow(): void {
     })
   })
 
-  // Permission handling: strictly allow only audio microphone capture for main window in Phase 7
+  // Permission handling: strictly allow user-authorized audio and video capture for main window
   session.defaultSession.setPermissionRequestHandler((webContents, permission, callback, details) => {
     const isMainWindow = Boolean(
       mainWindow && !mainWindow.isDestroyed() && webContents && webContents.id === mainWindow.webContents.id
     )
     if (isMainWindow && permission === 'media') {
       const mediaTypes = details && 'mediaTypes' in details ? details.mediaTypes : undefined
-      const isAudioOnly =
+      const isMediaPermitted =
         !mediaTypes ||
-        (!mediaTypes.includes('video') && mediaTypes.includes('audio'))
-      if (isAudioOnly) {
+        mediaTypes.includes('audio') ||
+        mediaTypes.includes('video')
+      if (isMediaPermitted) {
         securityLogger.logEvent('PERMISSION_REQUEST', 'session-default', 'PERMITTED', {
           permission,
           mediaTypes,
-          reason: 'User-authorized microphone capture for HELIOXEN voice dock (Phase 7, Step 19)'
+          reason: 'User-authorized media capture for HELIOXEN (Phase 7 voice & Phase 8 camera/screen)'
         })
         callback(true)
         return
@@ -333,7 +555,7 @@ function createWindow(): void {
     )
     if (isMainWindow && permission === 'media') {
       const mediaType = details && 'mediaType' in details ? details.mediaType : undefined
-      if (!mediaType || mediaType === 'audio') {
+      if (!mediaType || mediaType === 'audio' || mediaType === 'video') {
         return true
       }
     }
@@ -418,9 +640,17 @@ function createWindow(): void {
 app.whenReady().then(async () => {
   await getModelRegistry().initialize()
   await getPreferencesStorage().initialize()
+  await getVoicePreferencesStorage().initialize()
   registerWindowIpcHandlers()
   registerAiAndCredentialIpcHandlers()
   createWindow()
+
+  // Forward agent progress events to the primary renderer window
+  mainExecutionEngine.onProgress((event) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send(IPC_CHANNELS.ORCHESTRATION_PROGRESS_EVENT, event)
+    }
+  })
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -452,4 +682,18 @@ app.on('will-quit', () => {
   ipcMain.removeHandler(IPC_CHANNELS.PREFERENCES_SET)
   ipcMain.removeHandler(IPC_CHANNELS.HEALTH_GET_STATUS)
   ipcMain.removeHandler(IPC_CHANNELS.ROUTING_GET_TASK_DEFINITIONS)
+  ipcMain.removeHandler(IPC_CHANNELS.AUDIO_GET_PERMISSION_STATUS)
+  ipcMain.removeHandler(IPC_CHANNELS.AUDIO_GET_DEVICES)
+  ipcMain.removeHandler(IPC_CHANNELS.VOICE_PREFERENCES_GET)
+  ipcMain.removeHandler(IPC_CHANNELS.VOICE_PREFERENCES_SET)
+  ipcMain.removeHandler(IPC_CHANNELS.CAPTURE_GET_DESKTOP_SOURCES)
+  ipcMain.removeHandler(IPC_CHANNELS.CAPTURE_CHECK_PERMISSION)
+  ipcMain.removeHandler(IPC_CHANNELS.DOCUMENTS_SELECT_FILES)
+  ipcMain.removeHandler(IPC_CHANNELS.DOCUMENTS_EXTRACT_FILE)
+  ipcMain.removeHandler(IPC_CHANNELS.DOCUMENTS_VALIDATE_FILE)
+  ipcMain.removeHandler(IPC_CHANNELS.ORCHESTRATION_PLAN)
+  ipcMain.removeHandler(IPC_CHANNELS.ORCHESTRATION_EXECUTE)
+  ipcMain.removeHandler(IPC_CHANNELS.ORCHESTRATION_CANCEL)
+  ipcMain.removeHandler(IPC_CHANNELS.ORCHESTRATION_GET_AUDIT)
+  ipcMain.removeHandler(IPC_CHANNELS.ORCHESTRATION_GET_TASK)
 })

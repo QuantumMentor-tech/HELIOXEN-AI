@@ -4,9 +4,22 @@ export const AiProviderIdSchema = z.enum(['google-gemini', 'openai'])
 
 export const MessageRoleSchema = z.enum(['system', 'user', 'assistant'])
 
+export const AiImageAttachmentSchema = z.object({
+  mimeType: z.string().min(1),
+  dataUrl: z.string().min(1)
+})
+
+export const AiDocumentContextSchema = z.object({
+  filename: z.string().min(1),
+  text: z.string(),
+  pageCount: z.number().int().positive().optional()
+})
+
 export const AiMessageSchema = z.object({
   role: MessageRoleSchema,
-  content: z.string().min(1, 'Message content cannot be empty')
+  content: z.string().min(1, 'Message content cannot be empty'),
+  imageAttachment: AiImageAttachmentSchema.optional(),
+  documentContext: z.array(AiDocumentContextSchema).optional()
 })
 
 export const AiTaskTypeSchema = z.enum([
@@ -25,7 +38,9 @@ export const AiGenerationRequestSchema = z.object({
   messages: z.array(AiMessageSchema).min(1, 'At least one message is required'),
   temperature: z.number().min(0).max(2).optional(),
   maxTokens: z.number().int().positive().optional(),
-  stream: z.boolean().optional()
+  stream: z.boolean().optional(),
+  imageAttachment: AiImageAttachmentSchema.optional(),
+  documentContext: z.array(AiDocumentContextSchema).optional()
 })
 
 export type ValidatedAiGenerationRequest = z.infer<typeof AiGenerationRequestSchema>
@@ -58,7 +73,11 @@ export const UserAiPreferencesSchema = z.object({
   allowCrossProviderFallback: z.boolean().default(false),
   temperature: z.number().min(0).max(2).optional(),
   maxTokens: z.number().int().positive().optional(),
-  stream: z.boolean()
+  stream: z.boolean(),
+  clearTransientOnSessionEnd: z.boolean().optional().default(true),
+  clearAttachmentsOnConversationClose: z.boolean().optional().default(true),
+  enableSourceAttribution: z.boolean().optional().default(true),
+  warnOnExternalTransmission: z.boolean().optional().default(true)
 })
 
 export type ValidatedUserAiPreferences = z.infer<typeof UserAiPreferencesSchema>

@@ -11,7 +11,8 @@ import {
   ChevronDown,
   Sparkles,
   CheckCircle2,
-  PhoneOff
+  PhoneOff,
+  Ear
 } from 'lucide-react'
 import { VoiceDockProps } from './types'
 import { Badge } from '../ui/Badge'
@@ -27,7 +28,20 @@ import {
   AudioBufferManager
 } from '../../services/audio'
 import { VoiceSessionCoordinator } from '../../services/voice/VoiceSessionCoordinator'
-import { VoiceSessionStatus, TranscriptSegment } from '../../../../shared/voice/types'
+import {
+  WakeWordService,
+  LocalWakeWordEngine,
+  AudioNoiseProcessor
+} from '../../services/voice'
+import {
+  VoiceSessionStatus,
+  TranscriptSegment,
+  WakeWordStatus,
+  WakeWordDetectionEvent,
+  AudioQualityMetrics,
+  UserVoicePreferences,
+  DEFAULT_VOICE_PREFERENCES
+} from '../../../../shared/voice/types'
 import { CURATED_MODELS } from '../../../../shared/ai/models'
 
 export const PersistentVoiceDock: React.FC<VoiceDockProps> = ({
@@ -54,6 +68,15 @@ export const PersistentVoiceDock: React.FC<VoiceDockProps> = ({
     )
   )
 
+  // Step 21 Wake-Word Service
+  const wakeWordServiceRef = useRef<WakeWordService>(
+    new WakeWordService({
+      captureService: captureServiceRef.current,
+      playbackService: playbackServiceRef.current,
+      sessionCoordinator: coordinatorRef.current
+    })
+  )
+
   // Subsystem states
   const [sessionStatus, setSessionStatus] = useState<VoiceSessionStatus>('idle')
   const [captureStatus, setCaptureStatus] = useState<CaptureStatus>('idle')
@@ -63,6 +86,12 @@ export const PersistentVoiceDock: React.FC<VoiceDockProps> = ({
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('default')
   const [isDeviceMenuOpen, setIsDeviceMenuOpen] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  // Step 21 Wake-Word & Audio Quality States
+  const [wakeWordStatus, setWakeWordStatus] = useState<WakeWordStatus>('disabled')
+  const [detectedWordEvent, setDetectedWordEvent] = useState<WakeWordDetectionEvent | null>(null)
+  const [qualityMetrics, setQualityMetrics] = useState<AudioQualityMetrics | null>(null)
+  const [voicePreferences, setVoicePreferences] = useState<UserVoicePreferences>(DEFAULT_VOICE_PREFERENCES)
 
   // Real-time VU meter & buffer
   const [vuLevel, setVuLevel] = useState<number>(0)
@@ -131,6 +160,27 @@ export const PersistentVoiceDock: React.FC<VoiceDockProps> = ({
       }
     })
 
+    // Step 21: Setup Wake-Word Service Callbacks
+    const wakeWordService = wakeWordServiceRef.current
+    wakeWordService.setCallbacks({
+      onStatusChange: (status, error) => {
+        setWakeWordStatus(status)
+        if (error) {
+          setErrorMessage(error)
+        }
+      },
+      onDetection: (event: WakeWordDetectionEvent) => {
+        setDetectedWordEvent(event)
+        // Auto-dismiss alert after 8 seconds if user doesn't confirm
+        setTimeout(() => {
+          setDetectedWordEvent((curr) => (curr?.timestamp === event.timestamp ? null : curr))
+        }, 8000)
+      },
+      onAudioQuality: (metrics: AudioQualityMetrics) => {
+        setQualityMetrics(metrics)
+      }
+    })
+
     // Query permission & devices
     captureService.checkPermission().then((perm) => {
       setPermissionStatus(perm)
@@ -143,6 +193,21 @@ export const PersistentVoiceDock: React.FC<VoiceDockProps> = ({
         setSelectedDeviceId(defaultDev.deviceId)
       }
     })
+
+    // Query stored voice preferences (Step 21)
+    if (typeof window !== 'undefined' && window.helioxen?.voice) {
+      window.helioxen.voice
+        .getPreferences()
+        .then((prefs) => {
+          if (prefs) {
+            setVoicePreferences(prefs)
+            wakeWordService.setPreferences(prefs)
+          }
+        })
+        .catch((e) => {
+          console.warn('[PersistentVoiceDock] Failed to query voice preferences:', e)
+        })
+    }
 
     // Global keyboard shortcut: Escape interrupts active voice session
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -162,8 +227,40 @@ export const PersistentVoiceDock: React.FC<VoiceDockProps> = ({
         window.removeEventListener('keydown', handleKeyDown)
       }
       coordinator.dispose()
+      wakeWordService.dispose()
     }
   }, [onSessionTranscript, onSessionStateChange])
+
+  // Explicit Toggle Wake-Word Monitoring (Step 21)
+  const handleToggleWakeWord = useCallback(async () => {
+    setErrorMessage(null)
+    const wakeWordService = wakeWordServiceRef.current
+
+    if (
+      wakeWordStatus === 'monitoring' ||
+      wakeWordStatus === 'enabling' ||
+      wakeWordStatus === 'temporarily-suspended'
+    ) {
+      await wakeWordService.disableMonitoring()
+    } else {
+      await wakeWordService.enableMonitoring()
+    }
+  }, [wakeWordStatus])
+
+  // Accept detected wake word and initiate voice session immediately (Mode A)
+  const handleAcceptWakeWordSession = useCallback(async () => {
+    setDetectedWordEvent(null)
+    const modelDef = CURATED_MODELS[activeModel]
+    await coordinatorRef.current.startSession(
+      {
+        provider: activeProvider,
+        model: activeModel,
+        enableAudioPlayback: true,
+        deviceId: selectedDeviceId !== 'default' ? selectedDeviceId : undefined
+      },
+      modelDef
+    )
+  }, [activeProvider, activeModel, selectedDeviceId])
 
   // Explicit Toggle Voice Session (Step 20)
   const handleToggleVoiceSession = useCallback(async () => {
@@ -279,7 +376,45 @@ export const PersistentVoiceDock: React.FC<VoiceDockProps> = ({
         </div>
       )}
 
-      {/* Left Slot: Audio Device & Input Selector */}
+      {/* Step 21: Local Wake-Word Detection Alert Toast (Mode A) */}
+      {detectedWordEvent && !isSessionActive && (
+        <div
+          role="alert"
+          aria-live="polite"
+          className="absolute left-1/2 -translate-x-1/2 -top-14 px-4 py-2 rounded-hx-md bg-hx-space/95 border border-hx-cyan/80 text-xs font-mono text-hx-cyan flex items-center space-x-3 shadow-hx-glow-cyan-sm animate-hx-fade-in z-hx-modal"
+        >
+          <Ear className="w-4 h-4 text-hx-cyan animate-pulse" />
+          <span>
+            Wake Word: <strong>"{detectedWordEvent.wakeWord}"</strong> ({Math.round(detectedWordEvent.confidence * 100)}%)
+          </span>
+          <button
+            onClick={handleAcceptWakeWordSession}
+            className="px-2.5 py-0.5 rounded bg-hx-cyan text-hx-space font-bold hover:brightness-110 transition-all text-[11px]"
+          >
+            Start Session
+          </button>
+          <button
+            onClick={() => setDetectedWordEvent(null)}
+            className="text-[10px] text-hx-text-muted hover:text-hx-text-primary underline ml-1"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Audio Distortion / Clipping Alert Toast */}
+      {qualityMetrics?.isClipping && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="absolute right-6 -top-10 px-2.5 py-1 rounded-hx-sm bg-hx-warning/20 border border-hx-warning text-[10px] font-mono text-hx-warning flex items-center space-x-1 animate-pulse z-hx-modal"
+        >
+          <AlertTriangle className="w-3 h-3 text-hx-warning" />
+          <span>Microphone Clipping Detected</span>
+        </div>
+      )}
+
+      {/* Left Slot: Audio Device, Input Selector & Wake-Word State */}
       <div className="flex items-center space-x-3 text-xs font-mono relative">
         <div className="flex items-center space-x-1.5 text-hx-text-secondary">
           <Volume2 className="w-3.5 h-3.5 text-hx-cyan" />
@@ -304,6 +439,37 @@ export const PersistentVoiceDock: React.FC<VoiceDockProps> = ({
               : captureStatus === 'capturing'
               ? 'RAW CAPTURE'
               : 'STANDBY'}
+          </span>
+        </div>
+
+        {/* Persistent Wake-Word State Indicator */}
+        <div className="hidden lg:flex items-center space-x-1.5 text-hx-text-secondary border-l border-hx-border-subtle pl-3">
+          <Ear
+            className={`w-3.5 h-3.5 ${
+              wakeWordStatus === 'monitoring'
+                ? 'text-hx-nominal animate-pulse'
+                : wakeWordStatus === 'temporarily-suspended'
+                ? 'text-hx-warning'
+                : 'text-hx-text-muted'
+            }`}
+          />
+          <span>WAKE:</span>
+          <span
+            className={`font-semibold ${
+              wakeWordStatus === 'monitoring'
+                ? 'text-hx-nominal'
+                : wakeWordStatus === 'temporarily-suspended'
+                ? 'text-hx-warning'
+                : 'text-hx-text-primary'
+            }`}
+          >
+            {wakeWordStatus === 'monitoring'
+              ? `ACTIVE (${voicePreferences.selectedWakeWord})`
+              : wakeWordStatus === 'temporarily-suspended'
+              ? 'SUSPENDED'
+              : wakeWordStatus === 'enabling'
+              ? 'STARTING'
+              : 'OFF'}
           </span>
         </div>
 
@@ -361,7 +527,7 @@ export const PersistentVoiceDock: React.FC<VoiceDockProps> = ({
         </div>
       </div>
 
-      {/* Center Slot: Real-Time Session Controller, Interrupt Button & VU Meter */}
+      {/* Center Slot: Real-Time Session Controller, Wake-Word Button, Interrupt & VU Meter */}
       <div className="flex items-center space-x-3">
         {/* Real-time 8-Segment Audio VU Meter */}
         <div
@@ -371,7 +537,8 @@ export const PersistentVoiceDock: React.FC<VoiceDockProps> = ({
         >
           {[1, 2, 3, 4, 5, 6, 7, 8].map((segIndex) => {
             const isActive =
-              (captureStatus === 'capturing' || isSessionActive) && segIndex <= vuLevel
+              (captureStatus === 'capturing' || isSessionActive || wakeWordStatus === 'monitoring') &&
+              segIndex <= vuLevel
             const minHeight = 4
             const maxHeight = 18
             const scaledHeight = isActive
@@ -434,6 +601,41 @@ export const PersistentVoiceDock: React.FC<VoiceDockProps> = ({
           </span>
         </button>
 
+        {/* Step 21: Explicit Wake-Word Monitoring Toggle Button */}
+        <button
+          type="button"
+          onClick={handleToggleWakeWord}
+          disabled={wakeWordStatus === 'enabling' || wakeWordStatus === 'stopping'}
+          aria-label={
+            wakeWordStatus === 'monitoring'
+              ? `Disable Wake-Word Monitoring (${voicePreferences.selectedWakeWord})`
+              : `Enable Local Wake-Word Monitoring (${voicePreferences.selectedWakeWord})`
+          }
+          title={
+            wakeWordStatus === 'monitoring'
+              ? `Wake-word monitoring active ("${voicePreferences.selectedWakeWord}") • Click to disable immediately`
+              : wakeWordStatus === 'temporarily-suspended'
+              ? `Wake-word temporarily suspended during playback`
+              : `Enable privacy-first on-device wake-word monitoring`
+          }
+          className={`flex items-center space-x-1 px-2.5 py-1.5 rounded-hx-sm border text-[11px] font-mono transition-all ${
+            wakeWordStatus === 'monitoring'
+              ? 'bg-hx-nominal/20 border-hx-nominal text-hx-nominal shadow-hx-glow-cyan-sm animate-pulse'
+              : wakeWordStatus === 'temporarily-suspended'
+              ? 'bg-hx-warning/20 border-hx-warning text-hx-warning'
+              : 'bg-hx-surface hover:bg-hx-hover border-hx-border-subtle text-hx-text-secondary hover:text-hx-text-primary'
+          }`}
+        >
+          <Ear className="w-3.5 h-3.5" />
+          <span className="hidden md:inline font-semibold">
+            {wakeWordStatus === 'monitoring'
+              ? 'WAKE: ON'
+              : wakeWordStatus === 'temporarily-suspended'
+              ? 'WAKE: PAUSED'
+              : 'WAKE: OFF'}
+          </span>
+        </button>
+
         {/* Secondary Raw Microphone Capture Trigger (Step 19 hardware isolation) */}
         <button
           type="button"
@@ -490,12 +692,12 @@ export const PersistentVoiceDock: React.FC<VoiceDockProps> = ({
         </button>
       </div>
 
-      {/* Right Slot: Buffer & Phase 7 Step 20 Status */}
+      {/* Right Slot: Buffer & Phase 7 Step 21 Status */}
       <div className="flex items-center space-x-3 text-xs font-mono">
         <div className="flex items-center space-x-1.5 text-[11px] text-hx-text-muted">
           <Radio
             className={`w-3 h-3 ${
-              isSessionActive || captureStatus === 'capturing'
+              isSessionActive || captureStatus === 'capturing' || wakeWordStatus === 'monitoring'
                 ? 'text-hx-nominal animate-pulse'
                 : 'text-hx-text-muted'
             }`}
@@ -503,7 +705,7 @@ export const PersistentVoiceDock: React.FC<VoiceDockProps> = ({
           <span className="hidden sm:inline">BUFFER:</span>
           <span
             className={`font-medium ${
-              captureStatus === 'capturing' || isSessionActive
+              captureStatus === 'capturing' || isSessionActive || wakeWordStatus === 'monitoring'
                 ? 'text-hx-nominal'
                 : 'text-hx-text-primary'
             }`}
@@ -513,10 +715,22 @@ export const PersistentVoiceDock: React.FC<VoiceDockProps> = ({
         </div>
 
         <Badge
-          variant={isSessionActive ? 'nominal' : captureStatus === 'capturing' ? 'info' : 'neutral'}
+          variant={
+            isSessionActive
+              ? 'nominal'
+              : wakeWordStatus === 'monitoring'
+              ? 'nominal'
+              : captureStatus === 'capturing'
+              ? 'info'
+              : 'neutral'
+          }
           size="sm"
         >
-          {isSessionActive ? 'SESSION LIVE' : 'Phase 7 Active'}
+          {isSessionActive
+            ? 'SESSION LIVE'
+            : wakeWordStatus === 'monitoring'
+            ? 'WAKE WORD ON'
+            : 'Phase 7 Active'}
         </Badge>
       </div>
     </footer>

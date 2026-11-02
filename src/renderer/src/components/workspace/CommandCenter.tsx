@@ -7,8 +7,12 @@ import { useNavigation } from '../navigation/useNavigation'
 import { PersistentVoiceDock } from '../voice/PersistentVoiceDock'
 import { AiCoreState } from '../core/types'
 import { ConversationMessage } from '../conversation/types'
-import { UserAiPreferences, DEFAULT_AI_PREFERENCES } from '../../../../shared/ai/models'
+import { UserAiPreferences, DEFAULT_AI_PREFERENCES, CURATED_MODELS } from '../../../../shared/ai/models'
 import { TranscriptSegment, VoiceSessionStatus } from '../../../../shared/voice/types'
+import { CapturedStillImage } from '../../../../shared/capture'
+import { FileAttachment } from '../../../../shared/documents'
+import { MultimodalContextItem } from '../../../../shared/context/types'
+import { unifiedContextService } from '../../services/context'
 
 export interface CommandCenterProps {
   className?: string
@@ -17,6 +21,7 @@ export interface CommandCenterProps {
 export const CommandCenter: React.FC<CommandCenterProps> = ({
   className = ''
 }) => {
+  const conversationId = 'conv-default'
   const {
     currentDestination,
     currentDestinationMeta,
@@ -34,8 +39,21 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
   // Local ephemeral conversation thread state (buffered in session memory)
   const [messages, setMessages] = useState<ConversationMessage[]>([])
 
+  // Active unified multimodal context items
+  const [contextItems, setContextItems] = useState<MultimodalContextItem[]>(() =>
+    unifiedContextService.getItems(conversationId)
+  )
+
   // User AI preferences (active provider and model selection)
   const [aiPreferences, setAiPreferences] = useState<UserAiPreferences>(DEFAULT_AI_PREFERENCES)
+
+  // Subscribe to UnifiedContextService updates
+  useEffect(() => {
+    const unsubscribe = unifiedContextService.onContextUpdated(conversationId, (items) => {
+      setContextItems([...items])
+    })
+    return () => unsubscribe()
+  }, [conversationId])
 
   // Load preferences from preload bridge on mount and when returning from Settings
   useEffect(() => {
@@ -75,13 +93,98 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
   }
 
   // Handle message submission from ConversationComposer
-  const handleSendMessage = async (content: string) => {
+  const handleSendMessage = async (
+    content: string,
+    attachment?: CapturedStillImage,
+    fileAttachments?: FileAttachment[]
+  ) => {
+    let fallbackDesc = ''
+    if (attachment) fallbackDesc = '(Attached visual snapshot)'
+    else if (fileAttachments && fileAttachments.length > 0) {
+      fallbackDesc = `(Attached: ${fileAttachments.map((f) => f.name).join(', ')})`
+    }
+    const effectiveContent = content || fallbackDesc
+
+    // Register User Message in UnifiedContextService
+    unifiedContextService.registerItem({
+      conversationId,
+      sourceType: 'user_message',
+      trustLevel: 'user',
+      title: effectiveContent.substring(0, 32) || 'User Message',
+      status: 'active',
+      retentionPolicy: 'conversation_ephemeral',
+      textPayload: effectiveContent,
+      sizeBytes: effectiveContent.length
+    })
+
+    // Register Visual Capture Attachment in UnifiedContextService if present
+    if (attachment) {
+      unifiedContextService.registerItem({
+        conversationId,
+        sourceType: attachment.sourceType === 'screen' ? 'screen_capture' : 'camera_capture',
+        trustLevel: 'external_untrusted',
+        title: attachment.sourceType === 'screen' ? 'Screen Capture' : 'Camera Snapshot',
+        status: 'active',
+        retentionPolicy: 'transient_buffer',
+        imagePayload: {
+          mimeType: attachment.mimeType,
+          dataUrl: attachment.dataUrl,
+          width: attachment.width,
+          height: attachment.height,
+          sizeBytes: attachment.byteSize
+        },
+        sizeBytes: attachment.byteSize
+      })
+    }
+
+    // Register File Attachments in UnifiedContextService if present
+    if (fileAttachments && fileAttachments.length > 0) {
+      for (const file of fileAttachments) {
+        if (file.format === 'image' && file.imagePreviewUrl) {
+          unifiedContextService.registerItem({
+            conversationId,
+            sourceType: 'image_attachment',
+            trustLevel: 'external_untrusted',
+            title: file.name,
+            status: 'active',
+            retentionPolicy: 'transient_buffer',
+            imagePayload: {
+              mimeType: file.mimeType,
+              dataUrl: file.imagePreviewUrl,
+              sizeBytes: file.sizeBytes
+            },
+            sizeBytes: file.sizeBytes
+          })
+        } else if (file.extractedText) {
+          unifiedContextService.registerItem({
+            conversationId,
+            sourceType: 'extracted_document',
+            trustLevel: 'external_untrusted',
+            title: file.name,
+            status: 'active',
+            retentionPolicy: 'transient_buffer',
+            textPayload: file.extractedText,
+            documentMetadata: {
+              filename: file.name,
+              format: file.format,
+              pageCount: file.extractionResult?.pageCount,
+              charCount: file.extractedText.length,
+              isTruncated: file.extractionResult?.isTruncated
+            },
+            sizeBytes: file.sizeBytes
+          })
+        }
+      }
+    }
+
     const userMsg: ConversationMessage = {
       id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       role: 'user',
-      content,
+      content: effectiveContent,
       timestamp: Date.now(),
-      status: 'delivered'
+      status: 'delivered',
+      attachment,
+      fileAttachments
     }
 
     if (!window.helioxen?.ai) {
@@ -95,6 +198,30 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
           content: 'Electron IPC bridge unavailable. Please run HELIOXEN inside the Electron runtime.',
           timestamp: Date.now(),
           status: 'error'
+        }
+      ])
+      return
+    }
+
+    // Assemble unified multimodal context with capability checking and budgeting
+    const assembly = unifiedContextService.assembleContext({
+      conversationId,
+      selectedModelId: aiPreferences.activeModel
+    })
+
+    // If active model lacks vision and an image was provided, inform user safely
+    if (assembly.omittedItems.length > 0 && !assembly.hasMultimodalImage && (attachment || fileAttachments?.some((f) => f.format === 'image'))) {
+      const omittedReason = assembly.omittedItems.map((o) => `${o.title}: ${o.reason}`).join('; ')
+      setMessages((prev) => [
+        ...prev,
+        userMsg,
+        {
+          id: `asst-${Date.now()}`,
+          role: 'assistant',
+          content: `⚠️ Context Capability Warning: ${omittedReason}. Your image is preserved in local session memory and was not transmitted.`,
+          timestamp: Date.now(),
+          status: 'delivered',
+          model: aiPreferences.activeModel
         }
       ])
       return
@@ -152,21 +279,39 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
         messages: history,
         temperature: aiPreferences.temperature,
         stream: aiPreferences.stream,
-        taskType: 'conversation'
+        taskType: 'conversation',
+        imageAttachment: assembly.assembledPayload.imageAttachment,
+        documentContext: assembly.assembledPayload.documentContext
       })
 
+      const responseFinalText = response.text || accumulatedText
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === assistantMsgId
             ? {
                 ...msg,
-                content: response.text || accumulatedText,
+                content: responseFinalText,
                 status: 'delivered',
                 model: response.model
               }
             : msg
         )
       )
+
+      // Register Assistant Response in UnifiedContextService
+      if (responseFinalText) {
+        unifiedContextService.registerItem({
+          conversationId,
+          sourceType: 'assistant_response',
+          trustLevel: 'assistant',
+          title: 'Assistant Response',
+          status: 'active',
+          retentionPolicy: 'conversation_ephemeral',
+          textPayload: responseFinalText,
+          sizeBytes: responseFinalText.length
+        })
+      }
+
       setAiCoreState('idle')
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : String(err)
@@ -221,6 +366,19 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
       model: segment.speaker === 'assistant' ? aiPreferences.activeModel : undefined
     }
 
+    // Register finalized voice segment in UnifiedContextService
+    unifiedContextService.registerItem({
+      conversationId,
+      sourceType: 'voice_transcript',
+      trustLevel: 'voice_input',
+      title: `Voice: ${segment.speaker}`,
+      status: 'active',
+      retentionPolicy: 'conversation_ephemeral',
+      textPayload: segment.text,
+      sizeBytes: segment.text.length,
+      sourceRefId: segment.id
+    })
+
     setMessages((prev) => {
       if (prev.some((m) => m.id === segment.id)) {
         return prev.map((m) => (m.id === segment.id ? newMsg : m))
@@ -237,6 +395,24 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
     } else if (state === 'idle' || state === 'completed' || state === 'interrupted') {
       setAiCoreState('idle')
     }
+  }
+
+  // Unified Multimodal Context Handlers
+  const handleToggleContextInclusion = (itemId: string) => {
+    unifiedContextService.toggleItemInclusion(conversationId, itemId)
+  }
+
+  const handleRemoveContextItem = (itemId: string) => {
+    unifiedContextService.removeItem(conversationId, itemId)
+  }
+
+  const handleClearTransientContext = () => {
+    unifiedContextService.clearTransientContext(conversationId)
+  }
+
+  const handleClearConversationContext = () => {
+    unifiedContextService.clearConversation(conversationId)
+    handleClearMessages()
   }
 
   return (
@@ -261,7 +437,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
           onSetAiCoreState={setAiCoreState}
           messages={messages}
           onSendMessage={handleSendMessage}
-          onClearMessages={handleClearMessages}
+          onClearMessages={handleClearConversationContext}
         />
       }
       context={
@@ -269,6 +445,14 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
           <ContextPanel
             isOpen={isContextOpen}
             onToggle={handleToggleContext}
+            conversationId={conversationId}
+            activeProvider={aiPreferences.activeProvider}
+            activeModel={aiPreferences.activeModel}
+            contextItems={contextItems}
+            onToggleInclusion={handleToggleContextInclusion}
+            onRemoveItem={handleRemoveContextItem}
+            onClearTransient={handleClearTransientContext}
+            onClearConversation={handleClearConversationContext}
           />
         ) : null
       }

@@ -68,3 +68,56 @@ export const VoiceSessionErrorSchema = z.object({
   recoverable: z.boolean(),
   details: z.record(z.string(), z.unknown()).optional()
 })
+
+export const WakeWordSchema = z.enum(['helioxen', 'hey-helioxen'])
+
+export const WakeWordSensitivitySchema = z.enum(['low', 'balanced', 'high'])
+
+export const WakeWordActivationModeSchema = z.enum(['confirm', 'auto-session'])
+
+export const WakeWordStatusSchema = z.enum([
+  'disabled',
+  'enabling',
+  'awaiting-permission',
+  'initializing-engine',
+  'monitoring',
+  'wake-word-detected',
+  'handing-off',
+  'temporarily-suspended',
+  'stopping',
+  'recoverable-error',
+  'fatal-error'
+])
+
+export const WakeWordDetectionEventSchema = z.object({
+  wakeWord: WakeWordSchema,
+  confidence: z.number().min(0).max(1),
+  timestamp: z.number().positive(),
+  energy: z.number().nonnegative(),
+  durationMs: z.number().nonnegative().optional()
+})
+
+export const AudioQualityMetricsSchema = z.object({
+  rmsEnergy: z.number().nonnegative(),
+  peakAmplitude: z.number().nonnegative(),
+  noiseFloorDb: z.number(),
+  isClipping: z.boolean(),
+  isSilent: z.boolean()
+})
+
+export const UserVoicePreferencesSchema = z.object({
+  wakeWordEnabled: z.boolean().default(false),
+  selectedWakeWord: WakeWordSchema.default('helioxen'),
+  sensitivity: WakeWordSensitivitySchema.default('balanced'),
+  activationMode: WakeWordActivationModeSchema.default('confirm'),
+  pauseDuringPlayback: z.boolean().default(true),
+  preferredInputDeviceId: z.string().optional(),
+  noiseSuppression: z.boolean().default(true),
+  echoCancellation: z.boolean().default(true),
+  outputVoice: z.string().optional(),
+  speechRate: z.number().min(0.5).max(2.0).default(1.0),
+  speechPitch: z.number().min(0.5).max(2.0).default(1.0),
+  speechVolume: z.number().min(0.0).max(1.0).default(1.0)
+})
+
+export type ValidatedUserVoicePreferences = z.infer<typeof UserVoicePreferencesSchema>

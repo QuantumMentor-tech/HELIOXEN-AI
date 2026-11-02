@@ -29,6 +29,9 @@ import { ConversationMessage } from '../conversation/types'
 import { ProviderSettingsPanel } from '../settings/ProviderSettingsPanel'
 import helioxenLogo from '../../assets/brand/helioxen-orbital-logo.png'
 
+import { CapturedStillImage } from '../../../../shared/capture'
+import { FileAttachment } from '../../../../shared/documents'
+
 export interface PrimaryWorkspacePanelProps {
   currentDestination: NavDestinationId
   currentDestinationMeta: NavItem
@@ -38,7 +41,11 @@ export interface PrimaryWorkspacePanelProps {
   aiCoreState: AiCoreState
   onSetAiCoreState: (state: AiCoreState) => void
   messages: ConversationMessage[]
-  onSendMessage: (content: string) => void
+  onSendMessage: (
+    content: string,
+    attachment?: CapturedStillImage,
+    fileAttachments?: FileAttachment[]
+  ) => void
   onClearMessages: () => void
   className?: string
 }

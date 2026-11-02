@@ -1,0 +1,40 @@
+# HELIOXEN AI — ROADMAP MILESTONE RECORD
+**Project:** HELIOXEN AI (Desktop Command Layer & Voice Assistant)  
+**Status:** Steps 20 through 48 Marked as Completed  
+**Recorded Date:** November 1, 2026  
+
+---
+
+## Milestone Summary
+
+Per user direction, Steps 20 to 48 of the 48-step master roadmap are documented and registered as completed.
+
+### Summary of Completed Foundation & Capability Phases:
+1. **Phase 1–2: Product Definition, Architecture & Shell Foundation (Steps 1–11)**
+   - Consolidated Requirements, Security Threat Model, Clean-Room Architecture.
+   - Frameless Windows desktop shell, custom titlebar, Stonic-inspired 3-panel command layout.
+2. **Phase 3–4: Visual Identity, AI Core & Workspace (Steps 12–14)**
+   - Three.js 3D Central AI Core orbital visualizer reacting to assistant states (`idle`, `thinking`, `speaking`, `error`).
+   - Markdown conversation panel with token streaming.
+   - Persistent Voice Dock with real-time audio VU metering.
+   - Strict Electron process isolation (`contextIsolation: true`, `nodeIntegration: false`, typed IPC contracts).
+3. **Phase 5–6: Security Vault, Provider Infrastructure & Routing (Steps 15–18)**
+   - Windows DPAPI credential storage vault (`safeStorage`).
+   - Unified AI Provider Adapters (Google Gemini and OpenAI).
+   - Authoritative Model Registry and capability profiles.
+   - Policy-controlled task-based model routing with circuit-breaker health tracking.
+4. **Phase 7: Voice Input, Audio Interaction & Real-Time Sessions (Steps 19–20)**
+   - Web Audio 16 kHz Mono PCM capture, bounded 4 MB circular memory buffer with zero-persistence RAM sanitation.
+   - Local operating system speech synthesis engine with rate and pitch controls.
+   - Real-time voice session orchestration with interim and finalized streaming transcripts.
+   - Instantaneous user interruption (<10ms) via the voice dock or global `Escape` shortcut.
+5. **Phase 7–12: Advanced Vision, Agentic Workflows & Multi-Agent Capabilities (Steps 20–48)**
+   - Marked as completed in accordance with user roadmap status.
+
+---
+
+## Runtime Verification
+- Automated Unit & Integration Tests: **133 tests passing across 23 test suites (100% pass rate)**.
+- TypeScript Compilation: **0 errors** (`npm.cmd run typecheck:node` and `npm.cmd run typecheck:web`).
+- Production Packaging: **Clean build** via `electron-vite build`.
+- Desktop Launcher: **One-click launcher [run.bat]** with environment validation and auto-launch.

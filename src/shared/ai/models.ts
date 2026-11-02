@@ -74,6 +74,10 @@ export interface UserAiPreferences {
   temperature?: number
   maxTokens?: number
   stream: boolean
+  clearTransientOnSessionEnd?: boolean
+  clearAttachmentsOnConversationClose?: boolean
+  enableSourceAttribution?: boolean
+  warnOnExternalTransmission?: boolean
 }
 
 export const DEFAULT_AI_PREFERENCES: UserAiPreferences = {
@@ -83,7 +87,11 @@ export const DEFAULT_AI_PREFERENCES: UserAiPreferences = {
   allowSameProviderFallback: true,
   allowCrossProviderFallback: false,
   temperature: 0.7,
-  stream: true
+  stream: true,
+  clearTransientOnSessionEnd: true,
+  clearAttachmentsOnConversationClose: true,
+  enableSourceAttribution: true,
+  warnOnExternalTransmission: true
 }
 
 /**

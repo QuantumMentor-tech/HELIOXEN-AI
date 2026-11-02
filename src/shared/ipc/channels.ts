@@ -39,7 +39,35 @@ export const IPC_CHANNELS = {
 
   // Audio & Microphone Operations (Renderer -> Main)
   AUDIO_GET_PERMISSION_STATUS: 'audio:getPermissionStatus',
-  AUDIO_GET_DEVICES: 'audio:getDevices'
+  AUDIO_GET_DEVICES: 'audio:getDevices',
+
+  // Voice & Wake-Word Preferences Operations (Renderer -> Main)
+  VOICE_PREFERENCES_GET: 'voice:preferencesGet',
+  VOICE_PREFERENCES_SET: 'voice:preferencesSet',
+
+  // Camera & Screen Capture Operations (Renderer -> Main, Phase 8 Step 22)
+  CAPTURE_GET_DESKTOP_SOURCES: 'capture:getDesktopSources',
+  CAPTURE_CHECK_PERMISSION: 'capture:checkPermission',
+
+  // Document Extraction & File Attachment Operations (Renderer -> Main, Phase 8 Step 23)
+  DOCUMENTS_SELECT_FILES: 'documents:selectFiles',
+  DOCUMENTS_EXTRACT_FILE: 'documents:extractFile',
+  DOCUMENTS_VALIDATE_FILE: 'documents:validateFile',
+
+  // Tool Registry & Validation Operations (Renderer -> Main, Phase 9 Step 25)
+  TOOLS_LIST: 'tools:list',
+  TOOLS_GET: 'tools:get',
+  TOOLS_VALIDATE_INPUT: 'tools:validateInput',
+
+  // Task Planner & Agent Execution Operations (Renderer -> Main, Phase 9 Step 26-27)
+  ORCHESTRATION_PLAN: 'orchestration:plan',
+  ORCHESTRATION_EXECUTE: 'orchestration:execute',
+  ORCHESTRATION_CANCEL: 'orchestration:cancel',
+  ORCHESTRATION_GET_AUDIT: 'orchestration:getAudit',
+  ORCHESTRATION_GET_TASK: 'orchestration:getTask',
+
+  // Task Progress Event Push (Main -> Renderer, Phase 9 Step 27)
+  ORCHESTRATION_PROGRESS_EVENT: 'orchestration:progressEvent'
 } as const
 
 export type IpcChannel = typeof IPC_CHANNELS[keyof typeof IPC_CHANNELS]

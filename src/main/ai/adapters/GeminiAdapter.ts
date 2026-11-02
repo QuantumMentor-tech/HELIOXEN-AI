@@ -52,20 +52,48 @@ export class GeminiAdapter implements AiProviderAdapter {
     return requestedModel
   }
 
-  private prepareContents(messages: AiGenerationRequest['messages']): {
-    contents: Array<{ role: string; parts: Array<{ text: string }> }>
+  private prepareContents(request: AiGenerationRequest): {
+    contents: Array<{ role: string; parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> }>
     systemInstruction?: string
   } {
     let systemInstruction: string | undefined
-    const contents: Array<{ role: string; parts: Array<{ text: string }> }> = []
+    const contents: Array<{ role: string; parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> }> = []
 
-    for (const msg of messages) {
+    for (let i = 0; i < request.messages.length; i++) {
+      const msg = request.messages[i]
+      const isLastUserMsg = i === request.messages.length - 1 && msg.role === 'user'
+
       if (msg.role === 'system') {
         systemInstruction = systemInstruction ? `${systemInstruction}\n${msg.content}` : msg.content
       } else {
+        const parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = []
+
+        let messageText = msg.content
+        const docContext = msg.documentContext || (isLastUserMsg ? request.documentContext : undefined)
+        if (docContext && docContext.length > 0) {
+          const docBlocks = docContext
+            .map((doc) => `[DOCUMENT ATTACHMENT: ${doc.filename}]\n${doc.text}\n[/DOCUMENT ATTACHMENT]`)
+            .join('\n\n')
+          messageText = `${docBlocks}\n\n${messageText}`
+        }
+
+        parts.push({ text: messageText })
+
+        const imageAtt = msg.imageAttachment || (isLastUserMsg ? request.imageAttachment : undefined)
+        if (imageAtt) {
+          const commaIdx = imageAtt.dataUrl.indexOf(',')
+          const base64Data = commaIdx >= 0 ? imageAtt.dataUrl.slice(commaIdx + 1) : imageAtt.dataUrl
+          parts.push({
+            inlineData: {
+              mimeType: imageAtt.mimeType || 'image/jpeg',
+              data: base64Data
+            }
+          })
+        }
+
         contents.push({
           role: msg.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: msg.content }]
+          parts
         })
       }
     }
@@ -96,7 +124,7 @@ export class GeminiAdapter implements AiProviderAdapter {
 
     const model = this.resolveModel(request.model)
     const client = this.getClient(apiKey)
-    const { contents, systemInstruction } = this.prepareContents(request.messages)
+    const { contents, systemInstruction } = this.prepareContents(request)
 
     try {
       const response = await client.models.generateContent({
@@ -155,7 +183,7 @@ export class GeminiAdapter implements AiProviderAdapter {
 
     const model = this.resolveModel(request.model)
     const client = this.getClient(apiKey)
-    const { contents, systemInstruction } = this.prepareContents(request.messages)
+    const { contents, systemInstruction } = this.prepareContents(request)
     const responseId = `gemini-stream-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
 
     try {

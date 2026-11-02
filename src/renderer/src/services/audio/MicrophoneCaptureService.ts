@@ -25,6 +25,7 @@ export class MicrophoneCaptureService {
   private vuIntervalId: ReturnType<typeof setInterval> | null = null
   private onStatusChange?: StatusChangeCallback
   private onVuMeter?: VuMeterCallback
+  private chunkListeners: Set<(chunk: Float32Array) => void> = new Set()
   private isDisposed = false
 
   constructor(bufferManager?: AudioBufferManager) {
@@ -37,6 +38,13 @@ export class MicrophoneCaptureService {
 
   public getBufferManager(): AudioBufferManager {
     return this.bufferManager
+  }
+
+  public addChunkListener(listener: (chunk: Float32Array) => void): () => void {
+    this.chunkListeners.add(listener)
+    return () => {
+      this.chunkListeners.delete(listener)
+    }
   }
 
   public setStatusCallback(callback: StatusChangeCallback): void {
@@ -185,6 +193,13 @@ export class MicrophoneCaptureService {
         if (this.status === 'capturing') {
           const inputData = event.inputBuffer.getChannelData(0)
           this.bufferManager.appendChunk(inputData)
+          for (const listener of this.chunkListeners) {
+            try {
+              listener(inputData)
+            } catch (err) {
+              console.error('[MicrophoneCaptureService] Error in chunk listener:', err)
+            }
+          }
         }
       }
 

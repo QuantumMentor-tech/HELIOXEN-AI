@@ -43,6 +43,7 @@ import {
   DEFAULT_AI_PREFERENCES,
   CURATED_PROVIDERS
 } from '../../../../shared/ai/models'
+import { VoiceSettingsSection } from './VoiceSettingsSection'
 
 export interface ProviderSettingsPanelProps {
   className?: string
@@ -1081,6 +1082,11 @@ export const ProviderSettingsPanel: React.FC<ProviderSettingsPanelProps> = ({
             )}
           </Card>
         </div>
+      </div>
+
+      {/* Voice Input, Wake-Word & Assistant Speech Preferences (Phase 7, Step 21) */}
+      <div className="pt-4 border-t border-hx-border-subtle">
+        <VoiceSettingsSection />
       </div>
     </div>
   )

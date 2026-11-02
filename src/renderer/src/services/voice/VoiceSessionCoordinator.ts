@@ -50,6 +50,18 @@ export class VoiceSessionCoordinator {
     return this.activeSessionId
   }
 
+  public getCaptureService(): MicrophoneCaptureService {
+    return this.captureService
+  }
+
+  public getPlaybackService(): SpeechPlaybackService {
+    return this.playbackService
+  }
+
+  public getBufferManager(): AudioBufferManager {
+    return this.bufferManager
+  }
+
   public getSegments(): TranscriptSegment[] {
     return [...this.segments]
   }

@@ -7,9 +7,22 @@ export type AiProviderId = 'google-gemini' | 'openai'
 
 export type MessageRole = 'system' | 'user' | 'assistant'
 
+export interface AiImageAttachment {
+  readonly mimeType: string
+  readonly dataUrl: string
+}
+
+export interface AiDocumentContext {
+  readonly filename: string
+  readonly text: string
+  readonly pageCount?: number
+}
+
 export interface AiMessage {
   role: MessageRole
   content: string
+  imageAttachment?: AiImageAttachment
+  documentContext?: AiDocumentContext[]
 }
 
 export interface AiTokenUsage {
@@ -26,6 +39,8 @@ export interface AiGenerationRequest {
   maxTokens?: number
   stream?: boolean
   taskType?: 'conversation' | 'fast-response' | 'complex-reasoning' | 'structured-extraction'
+  imageAttachment?: AiImageAttachment
+  documentContext?: AiDocumentContext[]
 }
 
 export interface AiGenerationResponse {
