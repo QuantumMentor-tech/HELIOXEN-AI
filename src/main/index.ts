@@ -29,12 +29,91 @@ import {
   DEFAULT_DOCUMENT_LIMITS,
   FileAttachment
 } from '../shared/documents'
+import {
+  SystemHealthRequestSchema,
+  InstalledAppsRequestSchema,
+  WindowDiscoveryRequestSchema
+} from '../shared/telemetry'
+import {
+  DirectoryListingRequestSchema,
+  FileSearchRequestSchema,
+  ReadTextFileRequestSchema,
+  CreateFileRequestSchema,
+  CopyFileRequestSchema,
+  MoveFileRequestSchema,
+  OrganizationPlanRequestSchema,
+  OrganizationApplyRequestSchema,
+  OrganizationUndoRequestSchema,
+  ClipboardWriteTextRequestSchema
+} from '../shared/filesystem'
+import {
+  TargetWindowReferenceSchema,
+  KeyboardActionRequestSchema,
+  TextEntryRequestSchema,
+  MouseClickRequestSchema,
+  MouseScrollRequestSchema,
+  UndoInteractionRequestSchema,
+  SystemOpenPathRequestSchema,
+  SystemShowInFolderRequestSchema,
+  SystemOpenUrlRequestSchema
+} from '../shared/interaction'
+import {
+  CreateSessionRequestSchema,
+  CreateTabRequestSchema,
+  NavigateTabRequestSchema,
+  SwitchTabRequestSchema,
+  CloseTabRequestSchema,
+  TabActionRequestSchema,
+  ClearSessionDataRequestSchema,
+  SetBrowserViewBoundsRequestSchema,
+  InspectPageRequestSchema,
+  ClickElementRequestSchema,
+  ScrollPageRequestSchema,
+  FillFieldRequestSchema,
+  SelectOptionRequestSchema,
+  ReviewFormRequestSchema,
+  SubmitFormRequestSchema,
+  ApproveDownloadRequestSchema,
+  CancelDownloadRequestSchema
+} from '../shared/browser'
+import {
+  desktopInteractionManager,
+  systemOperationManager
+} from './interaction'
+import {
+  browserSessionManager,
+  browserTabManager,
+  browserAgentManager,
+  browserDownloadManager
+} from './browser'
+import {
+  ResearchSearchQuerySchema,
+  ResearchExtractionRequestSchema,
+  BrowserScreenshotRequestSchema,
+  ValidateCitationsRequestSchema
+} from '../shared/research'
+import {
+  webSearchService,
+  webPageExtractor,
+  browserScreenshotService,
+  researchCollectionManager
+} from './research'
 import { authorizer, securityLogger, CredentialStorageService } from './security'
 import { ProviderService, ModelRegistry, PreferencesStorage } from './ai'
 import { VoicePreferencesStorage } from './voice/VoicePreferencesStorage'
 import { DocumentExtractionService } from './documents'
 import { mainToolRegistry } from './tools'
 import { mainTaskPlanner, mainExecutionEngine } from './orchestration'
+import {
+  systemTelemetryManager,
+  installedAppDiscoveryManager,
+  windowDiscoveryManager
+} from './telemetry'
+import {
+  fileOperationsManager,
+  fileOrganizationManager,
+  clipboardManager
+} from './filesystem'
 
 // Global window reference
 let mainWindow: BrowserWindow | null = null
@@ -95,10 +174,13 @@ export function getProviderService(): ProviderService {
 }
 
 // Enforce single instance lock to prevent multi-process window race conditions
-const hasSingleInstanceLock = app.requestSingleInstanceLock()
-if (!hasSingleInstanceLock) {
+const hasSingleInstanceLock = typeof app?.requestSingleInstanceLock === 'function'
+  ? app.requestSingleInstanceLock()
+  : true
+
+if (!hasSingleInstanceLock && typeof app?.quit === 'function') {
   app.quit()
-} else {
+} else if (typeof app?.on === 'function') {
   app.on('second-instance', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       if (mainWindow.isMinimized()) mainWindow.restore()
@@ -328,7 +410,10 @@ export function registerAiAndCredentialIpcHandlers(): void {
 
   ipcMain.handle(IPC_CHANNELS.CAPTURE_GET_DESKTOP_SOURCES, async (event, payload) => {
     assertValidSender(event)
-    authorizer.authorize('capture:getSources', { requester: 'renderer-main-window' })
+    authorizer.authorize('capture:getSources', {
+      requester: 'renderer-main-window',
+      consentRequestId: payload?.consentRequestId || 'engine_approved_ui_picker'
+    })
     const valid = validateIpcPayload(DesktopSourcesRequestSchema, payload || { types: ['screen', 'window'] })
     try {
       const sources = await desktopCapturer.getSources({
@@ -500,6 +585,473 @@ export function registerAiAndCredentialIpcHandlers(): void {
     assertValidSender(event)
     authorizer.authorize('orchestration:plan', { requester: 'renderer-main-window' })
     return mainExecutionEngine.getTask(payload?.taskId) || null
+  })
+
+  // System Telemetry & Desktop Awareness Handlers (Phase 10 Step 28)
+  ipcMain.handle(IPC_CHANNELS.TELEMETRY_GET_SYSTEM_HEALTH, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('telemetry:readSystemHealth', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(SystemHealthRequestSchema, payload || {})
+    return await systemTelemetryManager.getSystemHealth(valid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.TELEMETRY_GET_INSTALLED_APPS, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('telemetry:readInstalledApps', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(InstalledAppsRequestSchema, payload || {})
+    return await installedAppDiscoveryManager.getInstalledApps(valid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.TELEMETRY_SEARCH_INSTALLED_APPS, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('telemetry:readInstalledApps', { requester: 'renderer-main-window' })
+    return await installedAppDiscoveryManager.searchInstalledApps(payload?.query || '', payload?.limit)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.TELEMETRY_GET_DESKTOP_WINDOWS, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('telemetry:readDesktopWindows', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(WindowDiscoveryRequestSchema, payload || {})
+    return await windowDiscoveryManager.getDesktopWindows(valid)
+  })
+
+  // Filesystem & Clipboard Operations Handlers (Phase 10 Step 29)
+  ipcMain.handle(IPC_CHANNELS.FILESYSTEM_LIST_DIRECTORY, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('filesystem:read', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(DirectoryListingRequestSchema, payload || {})
+    return await fileOperationsManager.listDirectory(valid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.FILESYSTEM_GET_METADATA, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('filesystem:read', { requester: 'renderer-main-window' })
+    if (!payload?.rootPath || !payload?.filePath) throw new Error('rootPath and filePath required')
+    return await fileOperationsManager.getFileMetadata(payload.rootPath, payload.filePath)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.FILESYSTEM_SEARCH_FILES, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('filesystem:read', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(FileSearchRequestSchema, payload || {})
+    return await fileOperationsManager.searchFiles(valid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.FILESYSTEM_READ_TEXT, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('filesystem:read', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(ReadTextFileRequestSchema, payload || {})
+    return await fileOperationsManager.readTextFile(valid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.FILESYSTEM_CREATE_FILE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('filesystem:write', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(CreateFileRequestSchema, payload || {})
+    return await fileOperationsManager.createFile(valid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.FILESYSTEM_COPY_FILE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('filesystem:write', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(CopyFileRequestSchema, payload || {})
+    return await fileOperationsManager.copyFile(valid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.FILESYSTEM_MOVE_FILE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('filesystem:write', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(MoveFileRequestSchema, payload || {})
+    return await fileOperationsManager.moveFile(valid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.FILESYSTEM_ORGANIZE_PREVIEW, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('filesystem:read', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(OrganizationPlanRequestSchema, payload || {})
+    return await fileOrganizationManager.createOrganizationPlan(valid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.FILESYSTEM_ORGANIZE_APPLY, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('filesystem:organize', {
+      requester: 'renderer-main-window',
+      consentRequestId: payload?.consentRequestId || (payload?.planId ? `engine_approved_${payload.planId}` : undefined)
+    })
+    const valid = validateIpcPayload(OrganizationApplyRequestSchema, payload || {})
+    return await fileOrganizationManager.applyOrganizationPlan(valid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.FILESYSTEM_ORGANIZE_UNDO, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('filesystem:organize', {
+      requester: 'renderer-main-window',
+      consentRequestId: payload?.consentRequestId || (payload?.manifestId ? `engine_approved_${payload.manifestId}` : undefined)
+    })
+    const valid = validateIpcPayload(OrganizationUndoRequestSchema, payload || {})
+    return await fileOrganizationManager.undoOrganization(valid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.CLIPBOARD_READ_TEXT, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('clipboard:read', { requester: 'renderer-main-window' })
+    return clipboardManager.readText(payload?.maxChars)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.CLIPBOARD_WRITE_TEXT, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('clipboard:write', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(ClipboardWriteTextRequestSchema, payload || {})
+    return clipboardManager.writeText(valid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.CLIPBOARD_READ_IMAGE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('clipboard:read', { requester: 'renderer-main-window' })
+    return clipboardManager.readImage(payload?.maxBytes)
+  })
+
+  // Desktop Interaction & System Operations Handlers (Phase 10 Step 30)
+  ipcMain.handle(IPC_CHANNELS.DESKTOP_FOCUS_WINDOW, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('desktop:focusWindow', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(TargetWindowReferenceSchema, payload?.target || {})
+    return await desktopInteractionManager.focusWindow(valid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.DESKTOP_EXECUTE_KEYBOARD, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('desktop:keyAction', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(KeyboardActionRequestSchema, payload || {})
+    return await desktopInteractionManager.sendKeyAction(valid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.DESKTOP_SEND_TEXT, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('desktop:sendText', {
+      requester: 'renderer-main-window',
+      consentRequestId: payload?.consentRequestId
+    })
+    const valid = validateIpcPayload(TextEntryRequestSchema, payload || {})
+    return await desktopInteractionManager.sendText(valid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.DESKTOP_EXECUTE_MOUSE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('desktop:mouseAction', { requester: 'renderer-main-window' })
+    if (payload?.x !== undefined || payload?.button !== undefined || payload?.clickCount !== undefined) {
+      const valid = validateIpcPayload(MouseClickRequestSchema, payload || {})
+      return await desktopInteractionManager.sendClick(valid)
+    }
+    const valid = validateIpcPayload(MouseScrollRequestSchema, payload || {})
+    return await desktopInteractionManager.sendScroll(valid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.DESKTOP_EMERGENCY_STOP, async (event) => {
+    assertValidSender(event)
+    authorizer.authorize('desktop:emergencyStop', { requester: 'renderer-main-window' })
+    return desktopInteractionManager.emergencyStop()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.DESKTOP_UNDO_LAST_ACTION, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('desktop:undo', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(UndoInteractionRequestSchema, payload || {})
+    return await desktopInteractionManager.undoLastAction(valid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SYSTEM_OPEN_PATH, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('system:openPath', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(SystemOpenPathRequestSchema, payload || {})
+    return await systemOperationManager.openPath(valid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SYSTEM_SHOW_IN_FOLDER, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('system:showInFolder', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(SystemShowInFolderRequestSchema, payload || {})
+    return await systemOperationManager.showInFolder(valid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SYSTEM_OPEN_URL, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('system:openExternalUrl', {
+      requester: 'renderer-main-window',
+      consentRequestId: payload?.consentRequestId
+    })
+    const valid = validateIpcPayload(SystemOpenUrlRequestSchema, payload || {})
+    return await systemOperationManager.openExternalUrl(valid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SYSTEM_ALERT_BEEP, async (event) => {
+    assertValidSender(event)
+    authorizer.authorize('system:systemAlert', { requester: 'renderer-main-window' })
+    return systemOperationManager.systemAlertBeep()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SYSTEM_GET_DISPLAY_METRICS, async (event) => {
+    assertValidSender(event)
+    authorizer.authorize('system:getDisplayMetrics', { requester: 'renderer-main-window' })
+    return systemOperationManager.getDisplayMetrics()
+  })
+
+  // Browser Services, Sessions & Tab Handlers (Phase 11 Step 31)
+  ipcMain.handle(IPC_CHANNELS.BROWSER_CREATE_SESSION, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('browser:createSession', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(CreateSessionRequestSchema, payload || {})
+    return browserSessionManager.createSession(valid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.BROWSER_LIST_SESSIONS, async (event) => {
+    assertValidSender(event)
+    authorizer.authorize('browser:createSession', { requester: 'renderer-main-window' })
+    return browserSessionManager.listSessions()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.BROWSER_CLOSE_SESSION, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('browser:closeSession', { requester: 'renderer-main-window' })
+    return browserSessionManager.closeSession(payload?.sessionId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.BROWSER_CLEAR_SESSION, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('browser:clearSession', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(ClearSessionDataRequestSchema, payload || {})
+    return await browserSessionManager.clearSessionData(valid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.BROWSER_CREATE_TAB, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('browser:manageTabs', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(CreateTabRequestSchema, payload || {})
+    return await browserTabManager.createTab(valid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.BROWSER_NAVIGATE_TAB, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('browser:navigate', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(NavigateTabRequestSchema, payload || {})
+    return await browserTabManager.navigateTab(valid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.BROWSER_SWITCH_TAB, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('browser:manageTabs', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(SwitchTabRequestSchema, payload || {})
+    return browserTabManager.switchTab(valid.tabId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.BROWSER_CLOSE_TAB, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('browser:manageTabs', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(CloseTabRequestSchema, payload || {})
+    return browserTabManager.closeTab(valid.tabId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.BROWSER_GET_TAB_STATE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('browser:manageTabs', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(TabActionRequestSchema, payload || {})
+    return browserTabManager.getTabState(valid.tabId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.BROWSER_LIST_TABS, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('browser:manageTabs', { requester: 'renderer-main-window' })
+    return { tabs: browserTabManager.listTabs(payload?.sessionId) }
+  })
+
+  ipcMain.handle(IPC_CHANNELS.BROWSER_RELOAD_TAB, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('browser:manageTabs', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(TabActionRequestSchema, payload || {})
+    return browserTabManager.reloadTab(valid.tabId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.BROWSER_STOP_TAB, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('browser:manageTabs', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(TabActionRequestSchema, payload || {})
+    return browserTabManager.stopTab(valid.tabId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.BROWSER_GO_BACK, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('browser:manageTabs', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(TabActionRequestSchema, payload || {})
+    return browserTabManager.goBack(valid.tabId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.BROWSER_GO_FORWARD, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('browser:manageTabs', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(TabActionRequestSchema, payload || {})
+    return browserTabManager.goForward(valid.tabId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.BROWSER_SET_BOUNDS, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('browser:manageTabs', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(SetBrowserViewBoundsRequestSchema, payload || {})
+    browserTabManager.setBounds(valid.bounds)
+    return { success: true }
+  })
+
+  // Web Research, Content Extraction, Screenshots & Provenance (Phase 11 Step 32)
+  ipcMain.handle(IPC_CHANNELS.RESEARCH_SEARCH, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('research:webSearch', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(ResearchSearchQuerySchema, payload)
+    return await webSearchService.search(valid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.RESEARCH_EXTRACT_TAB, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('research:extractContent', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(ResearchExtractionRequestSchema, payload)
+    const record = await webPageExtractor.extractTabContent(valid)
+    if (payload?.conversationId) {
+      researchCollectionManager.addSourceRecord(payload.conversationId, record)
+    }
+    return record
+  })
+
+  ipcMain.handle(IPC_CHANNELS.RESEARCH_EXTRACT_URL, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('research:extractContent', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(ResearchExtractionRequestSchema, payload)
+    const record = await webPageExtractor.extractTabContent(valid)
+    if (payload?.conversationId) {
+      researchCollectionManager.addSourceRecord(payload.conversationId, record)
+    }
+    return record
+  })
+
+  ipcMain.handle(IPC_CHANNELS.RESEARCH_CAPTURE_SCREENSHOT, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('research:captureScreenshot', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(BrowserScreenshotRequestSchema, payload)
+    const record = await browserScreenshotService.captureTabScreenshot(valid)
+    if (payload?.conversationId) {
+      researchCollectionManager.addScreenshotRecord(payload.conversationId, record)
+    }
+    return record
+  })
+
+  ipcMain.handle(IPC_CHANNELS.RESEARCH_DISCARD_SCREENSHOT, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('research:captureScreenshot', { requester: 'renderer-main-window' })
+    return browserScreenshotService.discardScreenshot(payload?.screenshotId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.RESEARCH_GET_COLLECTION, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('research:manageResults', { requester: 'renderer-main-window' })
+    return researchCollectionManager.getOrCreateCollection(payload?.conversationId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.RESEARCH_UPDATE_SOURCE_INCLUSION, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('research:manageResults', { requester: 'renderer-main-window' })
+    return researchCollectionManager.setSourceInclusion(
+      payload?.conversationId,
+      payload?.sourceId,
+      Boolean(payload?.included)
+    )
+  })
+
+  ipcMain.handle(IPC_CHANNELS.RESEARCH_CLEAR_COLLECTION, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('research:manageResults', { requester: 'renderer-main-window' })
+    return researchCollectionManager.manageCollection({
+      conversationId: payload?.conversationId,
+      action: 'clear'
+    })
+  })
+
+  ipcMain.handle(IPC_CHANNELS.RESEARCH_VALIDATE_CITATIONS, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('research:manageResults', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(ValidateCitationsRequestSchema, payload)
+    return researchCollectionManager.validateCitations(valid)
+  })
+
+  // Browser Agent Automation, Safe Navigation, Form Interaction, and Download Policies (Phase 11 Step 33)
+  ipcMain.handle(IPC_CHANNELS.BROWSER_INSPECT_PAGE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('browser:inspectPage', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(InspectPageRequestSchema, payload || {})
+    return await browserAgentManager.inspectPage(valid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.BROWSER_CLICK_ELEMENT, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('browser:interact', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(ClickElementRequestSchema, payload || {})
+    return await browserAgentManager.clickElement(valid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.BROWSER_SCROLL_PAGE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('browser:interact', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(ScrollPageRequestSchema, payload || {})
+    return await browserAgentManager.scrollPage(valid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.BROWSER_FILL_FIELD, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('browser:fillForm', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(FillFieldRequestSchema, payload || {})
+    return await browserAgentManager.fillField(valid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.BROWSER_SELECT_OPTION, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('browser:fillForm', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(SelectOptionRequestSchema, payload || {})
+    return await browserAgentManager.selectOption(valid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.BROWSER_REVIEW_FORM, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('browser:inspectPage', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(ReviewFormRequestSchema, payload || {})
+    return await browserAgentManager.reviewForm(valid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.BROWSER_SUBMIT_FORM, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('browser:submitForm', {
+      requester: 'renderer-main-window',
+      consentRequestId:
+        payload?.consentRequestId ||
+        (payload?.confirmationToken ? `engine_approved_${payload.confirmationToken}` : undefined)
+    })
+    const valid = validateIpcPayload(SubmitFormRequestSchema, payload || {})
+    return await browserAgentManager.submitForm(valid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.BROWSER_LIST_DOWNLOADS, async (event) => {
+    assertValidSender(event)
+    authorizer.authorize('browser:download', { requester: 'renderer-main-window' })
+    return browserDownloadManager.listDownloads()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.BROWSER_APPROVE_DOWNLOAD, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('browser:download', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(ApproveDownloadRequestSchema, payload || {})
+    return browserDownloadManager.approveDownload(valid)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.BROWSER_CANCEL_DOWNLOAD, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('browser:download', { requester: 'renderer-main-window' })
+    const valid = validateIpcPayload(CancelDownloadRequestSchema, payload || {})
+    return browserDownloadManager.cancelDownload(valid)
   })
 }
 
@@ -691,9 +1243,74 @@ app.on('will-quit', () => {
   ipcMain.removeHandler(IPC_CHANNELS.DOCUMENTS_SELECT_FILES)
   ipcMain.removeHandler(IPC_CHANNELS.DOCUMENTS_EXTRACT_FILE)
   ipcMain.removeHandler(IPC_CHANNELS.DOCUMENTS_VALIDATE_FILE)
+  ipcMain.removeHandler(IPC_CHANNELS.TOOLS_LIST)
+  ipcMain.removeHandler(IPC_CHANNELS.TOOLS_GET)
+  ipcMain.removeHandler(IPC_CHANNELS.TOOLS_VALIDATE_INPUT)
   ipcMain.removeHandler(IPC_CHANNELS.ORCHESTRATION_PLAN)
   ipcMain.removeHandler(IPC_CHANNELS.ORCHESTRATION_EXECUTE)
   ipcMain.removeHandler(IPC_CHANNELS.ORCHESTRATION_CANCEL)
   ipcMain.removeHandler(IPC_CHANNELS.ORCHESTRATION_GET_AUDIT)
   ipcMain.removeHandler(IPC_CHANNELS.ORCHESTRATION_GET_TASK)
+  ipcMain.removeHandler(IPC_CHANNELS.TELEMETRY_GET_SYSTEM_HEALTH)
+  ipcMain.removeHandler(IPC_CHANNELS.TELEMETRY_GET_INSTALLED_APPS)
+  ipcMain.removeHandler(IPC_CHANNELS.TELEMETRY_SEARCH_INSTALLED_APPS)
+  ipcMain.removeHandler(IPC_CHANNELS.TELEMETRY_GET_DESKTOP_WINDOWS)
+  ipcMain.removeHandler(IPC_CHANNELS.FILESYSTEM_LIST_DIRECTORY)
+  ipcMain.removeHandler(IPC_CHANNELS.FILESYSTEM_GET_METADATA)
+  ipcMain.removeHandler(IPC_CHANNELS.FILESYSTEM_SEARCH_FILES)
+  ipcMain.removeHandler(IPC_CHANNELS.FILESYSTEM_READ_TEXT)
+  ipcMain.removeHandler(IPC_CHANNELS.FILESYSTEM_CREATE_FILE)
+  ipcMain.removeHandler(IPC_CHANNELS.FILESYSTEM_COPY_FILE)
+  ipcMain.removeHandler(IPC_CHANNELS.FILESYSTEM_MOVE_FILE)
+  ipcMain.removeHandler(IPC_CHANNELS.FILESYSTEM_ORGANIZE_PREVIEW)
+  ipcMain.removeHandler(IPC_CHANNELS.FILESYSTEM_ORGANIZE_APPLY)
+  ipcMain.removeHandler(IPC_CHANNELS.FILESYSTEM_ORGANIZE_UNDO)
+  ipcMain.removeHandler(IPC_CHANNELS.CLIPBOARD_READ_TEXT)
+  ipcMain.removeHandler(IPC_CHANNELS.CLIPBOARD_WRITE_TEXT)
+  ipcMain.removeHandler(IPC_CHANNELS.CLIPBOARD_READ_IMAGE)
+  ipcMain.removeHandler(IPC_CHANNELS.DESKTOP_FOCUS_WINDOW)
+  ipcMain.removeHandler(IPC_CHANNELS.DESKTOP_EXECUTE_KEYBOARD)
+  ipcMain.removeHandler(IPC_CHANNELS.DESKTOP_SEND_TEXT)
+  ipcMain.removeHandler(IPC_CHANNELS.DESKTOP_EXECUTE_MOUSE)
+  ipcMain.removeHandler(IPC_CHANNELS.DESKTOP_EMERGENCY_STOP)
+  ipcMain.removeHandler(IPC_CHANNELS.DESKTOP_UNDO_LAST_ACTION)
+  ipcMain.removeHandler(IPC_CHANNELS.SYSTEM_OPEN_PATH)
+  ipcMain.removeHandler(IPC_CHANNELS.SYSTEM_SHOW_IN_FOLDER)
+  ipcMain.removeHandler(IPC_CHANNELS.SYSTEM_OPEN_URL)
+  ipcMain.removeHandler(IPC_CHANNELS.SYSTEM_ALERT_BEEP)
+  ipcMain.removeHandler(IPC_CHANNELS.SYSTEM_GET_DISPLAY_METRICS)
+  ipcMain.removeHandler(IPC_CHANNELS.BROWSER_CREATE_SESSION)
+  ipcMain.removeHandler(IPC_CHANNELS.BROWSER_LIST_SESSIONS)
+  ipcMain.removeHandler(IPC_CHANNELS.BROWSER_CLOSE_SESSION)
+  ipcMain.removeHandler(IPC_CHANNELS.BROWSER_CLEAR_SESSION)
+  ipcMain.removeHandler(IPC_CHANNELS.BROWSER_CREATE_TAB)
+  ipcMain.removeHandler(IPC_CHANNELS.BROWSER_NAVIGATE_TAB)
+  ipcMain.removeHandler(IPC_CHANNELS.BROWSER_SWITCH_TAB)
+  ipcMain.removeHandler(IPC_CHANNELS.BROWSER_CLOSE_TAB)
+  ipcMain.removeHandler(IPC_CHANNELS.BROWSER_GET_TAB_STATE)
+  ipcMain.removeHandler(IPC_CHANNELS.BROWSER_LIST_TABS)
+  ipcMain.removeHandler(IPC_CHANNELS.BROWSER_RELOAD_TAB)
+  ipcMain.removeHandler(IPC_CHANNELS.BROWSER_STOP_TAB)
+  ipcMain.removeHandler(IPC_CHANNELS.BROWSER_GO_BACK)
+  ipcMain.removeHandler(IPC_CHANNELS.BROWSER_GO_FORWARD)
+  ipcMain.removeHandler(IPC_CHANNELS.BROWSER_SET_BOUNDS)
+  ipcMain.removeHandler(IPC_CHANNELS.RESEARCH_SEARCH)
+  ipcMain.removeHandler(IPC_CHANNELS.RESEARCH_EXTRACT_TAB)
+  ipcMain.removeHandler(IPC_CHANNELS.RESEARCH_EXTRACT_URL)
+  ipcMain.removeHandler(IPC_CHANNELS.RESEARCH_CAPTURE_SCREENSHOT)
+  ipcMain.removeHandler(IPC_CHANNELS.RESEARCH_DISCARD_SCREENSHOT)
+  ipcMain.removeHandler(IPC_CHANNELS.RESEARCH_GET_COLLECTION)
+  ipcMain.removeHandler(IPC_CHANNELS.RESEARCH_UPDATE_SOURCE_INCLUSION)
+  ipcMain.removeHandler(IPC_CHANNELS.RESEARCH_CLEAR_COLLECTION)
+  ipcMain.removeHandler(IPC_CHANNELS.RESEARCH_VALIDATE_CITATIONS)
+  ipcMain.removeHandler(IPC_CHANNELS.BROWSER_INSPECT_PAGE)
+  ipcMain.removeHandler(IPC_CHANNELS.BROWSER_CLICK_ELEMENT)
+  ipcMain.removeHandler(IPC_CHANNELS.BROWSER_SCROLL_PAGE)
+  ipcMain.removeHandler(IPC_CHANNELS.BROWSER_FILL_FIELD)
+  ipcMain.removeHandler(IPC_CHANNELS.BROWSER_SELECT_OPTION)
+  ipcMain.removeHandler(IPC_CHANNELS.BROWSER_REVIEW_FORM)
+  ipcMain.removeHandler(IPC_CHANNELS.BROWSER_SUBMIT_FORM)
+  ipcMain.removeHandler(IPC_CHANNELS.BROWSER_LIST_DOWNLOADS)
+  ipcMain.removeHandler(IPC_CHANNELS.BROWSER_APPROVE_DOWNLOAD)
+  ipcMain.removeHandler(IPC_CHANNELS.BROWSER_CANCEL_DOWNLOAD)
 })

@@ -125,13 +125,13 @@ Ran complete test suite via `npm.cmd test` (Vitest 2.1.0):
 
 | Deliverable | Path | Status |
 | :--- | :--- | :--- |
-| **Deliverable A: Common Provider-Adapter Contract** | [`src/shared/ai/types.ts`](../src/shared/ai/types.ts), [`src/shared/ai/contracts.ts`](../src/shared/ai/contracts.ts) | COMPLETE |
-| **Deliverable B: Approved Provider Adapters** | [`src/main/ai/adapters/GeminiAdapter.ts`](../src/main/ai/adapters/GeminiAdapter.ts), [`src/main/ai/adapters/OpenAiAdapter.ts`](../src/main/ai/adapters/OpenAiAdapter.ts) | COMPLETE |
-| **Deliverable C: Trusted Provider Service** | [`src/main/ai/ProviderService.ts`](../src/main/ai/ProviderService.ts) | COMPLETE |
-| **Deliverable D: Secure Credential-Management Integration** | [`src/renderer/src/components/settings/CredentialSettingsPanel.tsx`](../src/renderer/src/components/settings/CredentialSettingsPanel.tsx) | COMPLETE |
-| **Deliverable E: Conversation-Panel Integration** | [`src/renderer/src/components/workspace/CommandCenter.tsx`](../src/renderer/src/components/workspace/CommandCenter.tsx), [`src/renderer/src/components/workspace/PrimaryWorkspacePanel.tsx`](../src/renderer/src/components/workspace/PrimaryWorkspacePanel.tsx) | COMPLETE |
-| **Deliverable F: Provider & Security Tests** | [`tests/ai/geminiAdapter.test.ts`](../tests/ai/geminiAdapter.test.ts), [`tests/ai/openAiAdapter.test.ts`](../tests/ai/openAiAdapter.test.ts), [`tests/ai/providerService.test.ts`](../tests/ai/providerService.test.ts), [`tests/ai/contracts.test.ts`](../tests/ai/contracts.test.ts) | COMPLETE |
-| **Deliverable G: Architecture Documentation** | [`docs/architecture/HELIOXEN_AI_PROVIDER_ADAPTERS_AND_CREDENTIAL_INTEGRATION.md`](../docs/architecture/HELIOXEN_AI_PROVIDER_ADAPTERS_AND_CREDENTIAL_INTEGRATION.md) | COMPLETE |
+| **Deliverable A: Common Provider-Adapter Contract** | [`src/shared/ai/types.ts`](src/shared/ai/types.ts), [`src/shared/ai/contracts.ts`](src/shared/ai/contracts.ts) | COMPLETE |
+| **Deliverable B: Approved Provider Adapters** | [`src/main/ai/adapters/GeminiAdapter.ts`](src/main/ai/adapters/GeminiAdapter.ts), [`src/main/ai/adapters/OpenAiAdapter.ts`](src/main/ai/adapters/OpenAiAdapter.ts) | COMPLETE |
+| **Deliverable C: Trusted Provider Service** | [`src/main/ai/ProviderService.ts`](src/main/ai/ProviderService.ts) | COMPLETE |
+| **Deliverable D: Secure Credential-Management Integration** | [`src/renderer/src/components/settings/CredentialSettingsPanel.tsx`](src/renderer/src/components/settings/CredentialSettingsPanel.tsx) | COMPLETE |
+| **Deliverable E: Conversation-Panel Integration** | [`src/renderer/src/components/workspace/CommandCenter.tsx`](src/renderer/src/components/workspace/CommandCenter.tsx), [`src/renderer/src/components/workspace/PrimaryWorkspacePanel.tsx`](src/renderer/src/components/workspace/PrimaryWorkspacePanel.tsx) | COMPLETE |
+| **Deliverable F: Provider & Security Tests** | [`tests/ai/geminiAdapter.test.ts`](tests/ai/geminiAdapter.test.ts), [`tests/ai/openAiAdapter.test.ts`](tests/ai/openAiAdapter.test.ts), [`tests/ai/providerService.test.ts`](tests/ai/providerService.test.ts), [`tests/ai/contracts.test.ts`](tests/ai/contracts.test.ts) | COMPLETE |
+| **Deliverable G: Architecture Documentation** | [`docs/architecture/HELIOXEN_AI_PROVIDER_ADAPTERS_AND_CREDENTIAL_INTEGRATION.md`](docs/architecture/HELIOXEN_AI_PROVIDER_ADAPTERS_AND_CREDENTIAL_INTEGRATION.md) | COMPLETE |
 | **Deliverable H: Completion Reports** | `docs/STEP_16_COMPLETION_REPORT.md` & `STEP_16_COMPLETION_REPORT.md` | COMPLETE |
 
 ---

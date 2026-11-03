@@ -174,7 +174,7 @@ All **69 tests across 13 test suites passed**:
 - `tests/ai/modelRegistry.test.ts`: Test suite for ModelRegistry.
 - `tests/ai/preferencesStorage.test.ts`: Test suite for PreferencesStorage.
 - `docs/architecture/HELIOXEN_MODEL_REGISTRY_CAPABILITY_PROFILES_AND_PROVIDER_SETTINGS.md`: System architecture document.
-- `docs/STEP_17_COMPLETION_REPORT.md`: This completion report.
+- `docs/STEP_17_COMPLETION_REPORT.md`: Completion report in docs.
 - `STEP_17_COMPLETION_REPORT.md`: Root completion report.
 
 ---

@@ -181,7 +181,6 @@ Tests       96 passed (96)
 | `tests/ai/providerService.test.ts` | Modified | Added integration tests for routed calls, same-provider fallback, and stream protection. |
 | `tests/ai/contracts.test.ts` | Modified | Added tests for new routing schemas and preference contracts. |
 | `docs/architecture/HELIOXEN_TASK_BASED_ROUTING_FALLBACKS_AND_PROVIDER_HEALTH.md` | Created | Comprehensive architectural specification and policy tables. |
-| `docs/STEP_18_COMPLETION_REPORT.md` | Created | Duplicate copy of completion report for documentation consistency. |
 | `STEP_18_COMPLETION_REPORT.md` | Created | Authoritative completion report for Step 18. |
 
 ---

@@ -445,6 +445,315 @@ export const CAPABILITIES: Record<string, CapabilityDefinition> = {
     status: 'active'
   },
 
+  // --- Step 28: Desktop Awareness & Telemetry Capabilities ---
+  'telemetry:readSystemHealth': {
+    id: 'telemetry:readSystemHealth',
+    name: 'Read System Health Telemetry',
+    description: 'Retrieves non-invasive host and process CPU, memory, uptime, and storage capacity metrics.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'telemetry:readInstalledApps': {
+    id: 'telemetry:readInstalledApps',
+    name: 'Read Installed Applications Inventory',
+    description: 'Enumerates registered desktop application names, publishers, and categories from Start Menu metadata.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'telemetry:readDesktopWindows': {
+    id: 'telemetry:readDesktopWindows',
+    name: 'Read Desktop Windows Metadata',
+    description: 'Lists permitted top-level desktop windows and application associations without screen content capture.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+
+  // --- Step 29: Filesystem & Clipboard Operations Capabilities ---
+  'filesystem:read': {
+    id: 'filesystem:read',
+    name: 'Read Files and Directories',
+    description: 'Permits bounded directory listing, metadata inspection, file searching, and text reading in authorized roots.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'filesystem:write': {
+    id: 'filesystem:write',
+    name: 'Create, Copy and Move Files',
+    description: 'Permits creating, copying, moving, and renaming individual files within authorized root scopes.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'filesystem:organize': {
+    id: 'filesystem:organize',
+    name: 'Apply Reversible File Organization',
+    description: 'Executes multi-file organization plans under verified transaction manifest tracking.',
+    riskTier: 'high',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: true,
+    status: 'active'
+  },
+  'clipboard:read': {
+    id: 'clipboard:read',
+    name: 'Read System Clipboard',
+    description: 'Retrieves current clipboard text or image content on explicit user request.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'clipboard:write': {
+    id: 'clipboard:write',
+    name: 'Write to System Clipboard',
+    description: 'Copies user-approved text or content into the system clipboard.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+
+  // --- Step 30: Desktop Interaction & System Operations Capabilities ---
+  'desktop:focusWindow': {
+    id: 'desktop:focusWindow',
+    name: 'Focus Desktop Window',
+    description: 'Brings an explicitly verified application or desktop window into focused state.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'desktop:mouseAction': {
+    id: 'desktop:mouseAction',
+    name: 'Execute Controlled Mouse Action',
+    description: 'Dispatches bounded pointer movements, clicks, and scroll actions to a verified target window.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'desktop:keyAction': {
+    id: 'desktop:keyAction',
+    name: 'Execute Controlled Keyboard Action',
+    description: 'Invokes named, allowlisted keyboard shortcuts on a verified focused target.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'desktop:sendText': {
+    id: 'desktop:sendText',
+    name: 'Enter Approved Text',
+    description: 'Types user-approved text into a verified target input context without implicit submission.',
+    riskTier: 'high',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: true,
+    status: 'active'
+  },
+  'desktop:emergencyStop': {
+    id: 'desktop:emergencyStop',
+    name: 'Emergency Stop Desktop Interaction',
+    description: 'Immediately halts active desktop automation sequences and releases held modifiers.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'desktop:undo': {
+    id: 'desktop:undo',
+    name: 'Undo Desktop Interaction',
+    description: 'Performs verified undo on reversible desktop interactions.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'system:openPath': {
+    id: 'system:openPath',
+    name: 'Open Path in Default Application',
+    description: 'Opens a verified, authorized file or directory using the operating system default handler.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'system:showInFolder': {
+    id: 'system:showInFolder',
+    name: 'Show Item in File Manager',
+    description: 'Reveals a verified file or directory in Windows File Explorer.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'system:openExternalUrl': {
+    id: 'system:openExternalUrl',
+    name: 'Open External URL in Default Browser',
+    description: 'Opens a validated HTTP or HTTPS web address in the user default browser.',
+    riskTier: 'high',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: true,
+    status: 'active'
+  },
+  'system:systemAlert': {
+    id: 'system:systemAlert',
+    name: 'Trigger System Alert Sound',
+    description: 'Triggers the standard operating system notification beep.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'system:getDisplayMetrics': {
+    id: 'system:getDisplayMetrics',
+    name: 'Get Display Metrics',
+    description: 'Retrieves primary and active display dimensions, scale factors, and work areas.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+
+  // --- Step 31: Browser Services & Web Interaction Capabilities ---
+  'browser:createSession': {
+    id: 'browser:createSession',
+    name: 'Create Browser Session Profile',
+    description: 'Creates or configures an isolated in-memory or persistent browser session partition.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'browser:manageTabs': {
+    id: 'browser:manageTabs',
+    name: 'Manage Browser Tabs',
+    description: 'Creates, switches, closes, and inspects browser tabs within an authorized session.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'browser:navigate': {
+    id: 'browser:navigate',
+    name: 'Navigate Browser Tab',
+    description: 'Navigates an isolated browser tab to a validated HTTP or HTTPS web address.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'browser:clearSession': {
+    id: 'browser:clearSession',
+    name: 'Clear Browser Session Storage',
+    description: 'Clears cookies, cache, and web storage data for a specific browser session profile.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'browser:closeSession': {
+    id: 'browser:closeSession',
+    name: 'Close Browser Session',
+    description: 'Disposes a browser session and closes all associated tabs.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+
+  // --- Step 33: Browser Agent Automation & Download Capabilities ---
+  'browser:inspectPage': {
+    id: 'browser:inspectPage',
+    name: 'Inspect Browser Page Elements',
+    description: 'Discovers visible interactive controls, inputs, and form definitions on an authorized page.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'browser:interact': {
+    id: 'browser:interact',
+    name: 'Browser Interaction (Click & Scroll)',
+    description: 'Executes verified clicks and viewport scrolling on an authorized browser tab.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'browser:fillForm': {
+    id: 'browser:fillForm',
+    name: 'Fill Non-Sensitive Form Fields',
+    description: 'Enters user-provided data into non-sensitive form inputs without implicit submission.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'browser:submitForm': {
+    id: 'browser:submitForm',
+    name: 'Submit Browser Form',
+    description: 'Submits an online web form to external endpoints under explicit human confirmation.',
+    riskTier: 'high',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: true,
+    status: 'active'
+  },
+  'browser:download': {
+    id: 'browser:download',
+    name: 'Browser Download Management',
+    description: 'Intercepts, approves, or cancels downloads with path traversal and dangerous extension protection.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+
+  // --- Step 32: Web Research Capabilities ---
+  'research:webSearch': {
+    id: 'research:webSearch',
+    name: 'Web Search',
+    description: 'Executes approved web search queries and normalizes results.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'research:extractContent': {
+    id: 'research:extractContent',
+    name: 'Webpage Content Extraction',
+    description: 'Extracts structured, read-only text and headings from authorized browser tabs or URLs.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'research:captureScreenshot': {
+    id: 'research:captureScreenshot',
+    name: 'Browser Viewport Screenshot',
+    description: 'Captures a temporary viewport screenshot of an authorized browser tab.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'research:manageResults': {
+    id: 'research:manageResults',
+    name: 'Manage Research Results & Citations',
+    description: 'Manages task-scoped research collections, context inclusion, and citation verification.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+
   // --- Permanently Prohibited Capabilities ---
   'shell:execute': {
     id: 'shell:execute',

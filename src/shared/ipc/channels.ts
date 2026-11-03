@@ -67,7 +67,82 @@ export const IPC_CHANNELS = {
   ORCHESTRATION_GET_TASK: 'orchestration:getTask',
 
   // Task Progress Event Push (Main -> Renderer, Phase 9 Step 27)
-  ORCHESTRATION_PROGRESS_EVENT: 'orchestration:progressEvent'
+  ORCHESTRATION_PROGRESS_EVENT: 'orchestration:progressEvent',
+
+  // System Telemetry & Desktop Awareness Operations (Renderer -> Main, Phase 10 Step 28)
+  TELEMETRY_GET_SYSTEM_HEALTH: 'telemetry:getSystemHealth',
+  TELEMETRY_GET_INSTALLED_APPS: 'telemetry:getInstalledApps',
+  TELEMETRY_SEARCH_INSTALLED_APPS: 'telemetry:searchInstalledApps',
+  TELEMETRY_GET_DESKTOP_WINDOWS: 'telemetry:getDesktopWindows',
+
+  // Filesystem & Clipboard Operations (Renderer -> Main, Phase 10 Step 29)
+  FILESYSTEM_LIST_DIRECTORY: 'filesystem:listDirectory',
+  FILESYSTEM_GET_METADATA: 'filesystem:getMetadata',
+  FILESYSTEM_SEARCH_FILES: 'filesystem:searchFiles',
+  FILESYSTEM_READ_TEXT: 'filesystem:readText',
+  FILESYSTEM_CREATE_FILE: 'filesystem:createFile',
+  FILESYSTEM_COPY_FILE: 'filesystem:copyFile',
+  FILESYSTEM_MOVE_FILE: 'filesystem:moveFile',
+  FILESYSTEM_ORGANIZE_PREVIEW: 'filesystem:organizePreview',
+  FILESYSTEM_ORGANIZE_APPLY: 'filesystem:organizeApply',
+  FILESYSTEM_ORGANIZE_UNDO: 'filesystem:organizeUndo',
+  CLIPBOARD_READ_TEXT: 'clipboard:readText',
+  CLIPBOARD_WRITE_TEXT: 'clipboard:writeText',
+  CLIPBOARD_READ_IMAGE: 'clipboard:readImage',
+
+  // Step 30: Desktop Interaction & System Operations Channels
+  DESKTOP_FOCUS_WINDOW: 'desktop:focusWindow',
+  DESKTOP_EXECUTE_MOUSE: 'desktop:executeMouse',
+  DESKTOP_EXECUTE_KEYBOARD: 'desktop:executeKeyboard',
+  DESKTOP_SEND_TEXT: 'desktop:sendText',
+  DESKTOP_EMERGENCY_STOP: 'desktop:emergencyStop',
+  DESKTOP_UNDO_LAST_ACTION: 'desktop:undoLastAction',
+  SYSTEM_OPEN_PATH: 'system:openPath',
+  SYSTEM_SHOW_IN_FOLDER: 'system:showInFolder',
+  SYSTEM_OPEN_URL: 'system:openUrl',
+  SYSTEM_ALERT_BEEP: 'system:alertBeep',
+  SYSTEM_GET_DISPLAY_METRICS: 'system:getDisplayMetrics',
+
+  // Step 31: Browser Service, Sessions & Tab Channels
+  BROWSER_CREATE_SESSION: 'browser:createSession',
+  BROWSER_LIST_SESSIONS: 'browser:listSessions',
+  BROWSER_CLOSE_SESSION: 'browser:closeSession',
+  BROWSER_CLEAR_SESSION: 'browser:clearSession',
+  BROWSER_CREATE_TAB: 'browser:createTab',
+  BROWSER_NAVIGATE_TAB: 'browser:navigateTab',
+  BROWSER_SWITCH_TAB: 'browser:switchTab',
+  BROWSER_CLOSE_TAB: 'browser:closeTab',
+  BROWSER_GET_TAB_STATE: 'browser:getTabState',
+  BROWSER_LIST_TABS: 'browser:listTabs',
+  BROWSER_RELOAD_TAB: 'browser:reloadTab',
+  BROWSER_STOP_TAB: 'browser:stopTab',
+  BROWSER_GO_BACK: 'browser:goBack',
+  BROWSER_GO_FORWARD: 'browser:goForward',
+  BROWSER_SET_BOUNDS: 'browser:setBounds',
+
+  // Step 33: Browser Agent Automation, Forms & Downloads
+  BROWSER_INSPECT_PAGE: 'browser:inspectPage',
+  BROWSER_CLICK_ELEMENT: 'browser:clickElement',
+  BROWSER_SCROLL_PAGE: 'browser:scrollPage',
+  BROWSER_FILL_FIELD: 'browser:fillField',
+  BROWSER_SELECT_OPTION: 'browser:selectOption',
+  BROWSER_REVIEW_FORM: 'browser:reviewForm',
+  BROWSER_SUBMIT_FORM: 'browser:submitForm',
+  BROWSER_GET_DOWNLOADS: 'browser:getDownloads',
+  BROWSER_LIST_DOWNLOADS: 'browser:listDownloads',
+  BROWSER_APPROVE_DOWNLOAD: 'browser:approveDownload',
+  BROWSER_CANCEL_DOWNLOAD: 'browser:cancelDownload',
+
+  // Step 32: Web Research, Extraction & Screenshots
+  RESEARCH_SEARCH: 'research:search',
+  RESEARCH_EXTRACT_TAB: 'research:extractTab',
+  RESEARCH_EXTRACT_URL: 'research:extractUrl',
+  RESEARCH_CAPTURE_SCREENSHOT: 'research:captureScreenshot',
+  RESEARCH_DISCARD_SCREENSHOT: 'research:discardScreenshot',
+  RESEARCH_GET_COLLECTION: 'research:getCollection',
+  RESEARCH_UPDATE_SOURCE_INCLUSION: 'research:updateSourceInclusion',
+  RESEARCH_CLEAR_COLLECTION: 'research:clearCollection',
+  RESEARCH_VALIDATE_CITATIONS: 'research:validateCitations'
 } as const
 
 export type IpcChannel = typeof IPC_CHANNELS[keyof typeof IPC_CHANNELS]

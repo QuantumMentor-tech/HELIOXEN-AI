@@ -80,7 +80,7 @@ This step establishes the core security foundation for credentials, capabilities
 
 ## 6. Two-Tier Human Approval Gate Details
 
-- **Implementation:** [`src/main/security/consentGate.ts`](../src/main/security/consentGate.ts).
+- **Implementation:** [`src/main/security/consentGate.ts`](src/main/security/consentGate.ts).
 - **Request Generation:** Generates unique `requestId` (`consent-<timestamp>-<rand>`) bound to a `capabilityId` and `targetSummary`.
 - **TTL Expiry:** Automatically expires after 60 seconds (configurable).
 - **Action Binding:** Approval tokens bound to one capability cannot be consumed to authorize any other capability.
@@ -136,12 +136,12 @@ Ran full test suite using `npm.cmd test` (Vitest 2.1.0):
 
 | Deliverable | Path | Status |
 | :--- | :--- | :--- |
-| **Deliverable A: Capability Authorization Foundation** | [`src/shared/security/capabilities.ts`](../src/shared/security/capabilities.ts), [`src/main/security/authorizer.ts`](../src/main/security/authorizer.ts) | COMPLETE |
-| **Deliverable B: Secure Credential Storage Foundation** | [`src/main/security/credentialStorage.ts`](../src/main/security/credentialStorage.ts) | COMPLETE |
-| **Deliverable C: Current-Operation Security Integration** | [`src/main/index.ts`](../src/main/index.ts) (authorized window handlers) | COMPLETE |
-| **Deliverable D: Permission Baseline** | [`src/main/index.ts`](../src/main/index.ts) (`setPermissionCheckHandler` & `setPermissionRequestHandler`) | COMPLETE |
-| **Deliverable E: Safe Security Event Handling** | [`src/main/security/securityLogger.ts`](../src/main/security/securityLogger.ts) | COMPLETE |
-| **Deliverable F: Security Architecture Documentation** | [`docs/security/HELIOXEN_PERMISSIONS_CREDENTIALS_AND_EXECUTION_SECURITY.md`](../docs/security/HELIOXEN_PERMISSIONS_CREDENTIALS_AND_EXECUTION_SECURITY.md) | COMPLETE |
+| **Deliverable A: Capability Authorization Foundation** | [`src/shared/security/capabilities.ts`](src/shared/security/capabilities.ts), [`src/main/security/authorizer.ts`](src/main/security/authorizer.ts) | COMPLETE |
+| **Deliverable B: Secure Credential Storage Foundation** | [`src/main/security/credentialStorage.ts`](src/main/security/credentialStorage.ts) | COMPLETE |
+| **Deliverable C: Current-Operation Security Integration** | [`src/main/index.ts`](src/main/index.ts) (authorized window handlers) | COMPLETE |
+| **Deliverable D: Permission Baseline** | [`src/main/index.ts`](src/main/index.ts) (`setPermissionCheckHandler` & `setPermissionRequestHandler`) | COMPLETE |
+| **Deliverable E: Safe Security Event Handling** | [`src/main/security/securityLogger.ts`](src/main/security/securityLogger.ts) | COMPLETE |
+| **Deliverable F: Security Architecture Documentation** | [`docs/security/HELIOXEN_PERMISSIONS_CREDENTIALS_AND_EXECUTION_SECURITY.md`](docs/security/HELIOXEN_PERMISSIONS_CREDENTIALS_AND_EXECUTION_SECURITY.md) | COMPLETE |
 | **Deliverable G: Completion Report** | `docs/STEP_15_COMPLETION_REPORT.md` & `STEP_15_COMPLETION_REPORT.md` | COMPLETE |
 
 ---

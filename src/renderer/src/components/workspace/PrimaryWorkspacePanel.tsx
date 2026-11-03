@@ -99,7 +99,7 @@ export const PrimaryWorkspacePanel: React.FC<PrimaryWorkspacePanelProps> = ({
           actions={
             <div className="flex items-center space-x-2">
               <Badge variant="info" size="sm">
-                Step 12 of 48
+                Step 33 of 48
               </Badge>
               <IconButton
                 icon={

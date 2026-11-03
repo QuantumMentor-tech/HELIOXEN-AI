@@ -204,6 +204,18 @@ export interface HelioxenApi {
   readonly tools: HelioxenToolsApi
   /** Task planner and multi-step agent orchestration operations (Phase 9 Step 26) */
   readonly orchestration: HelioxenOrchestrationApi
+  /** System health telemetry, installed apps, and window discovery (Phase 10 Step 28) */
+  readonly telemetry: HelioxenTelemetryApi
+  /** File operations and reversible organization (Phase 10 Step 29) */
+  readonly filesystem: HelioxenFilesystemApi
+  /** Clipboard text and image processing (Phase 10 Step 29) */
+  readonly clipboard: HelioxenClipboardApi
+  /** Controlled desktop interaction and predefined system operations (Phase 10 Step 30) */
+  readonly desktop: HelioxenDesktopApi
+  /** Browser service, sessions, and tab management (Phase 11 Step 31) */
+  readonly browser: HelioxenBrowserApi
+  /** Web research, extraction, screenshots, and source citations (Phase 11 Step 32) */
+  readonly research: HelioxenResearchApi
 }
 
 import {
@@ -266,4 +278,194 @@ export interface HelioxenOrchestrationApi {
    * Subscribes to real-time monotonic progress events from the execution engine.
    */
   onProgress: (listener: (event: TaskProgressEvent) => void) => () => void
+}
+
+import {
+  SystemHealthTelemetry,
+  SystemHealthRequest,
+  InstalledAppsResult,
+  InstalledAppsRequest,
+  InstalledApplicationEntry,
+  WindowDiscoveryResult,
+  WindowDiscoveryRequest
+} from '../shared/telemetry/types'
+
+export interface HelioxenTelemetryApi {
+  /**
+   * Retrieves host and process health telemetry (CPU, memory, uptime, storage capacity).
+   */
+  getSystemHealth: (request?: SystemHealthRequest) => Promise<SystemHealthTelemetry>
+  /**
+   * Retrieves installed applications inventory with filtering and caching.
+   */
+  getInstalledApps: (request?: InstalledAppsRequest) => Promise<InstalledAppsResult>
+  /**
+   * Searches discovered application inventory by keyword.
+   */
+  searchInstalledApps: (query: string, limit?: number) => Promise<InstalledApplicationEntry[]>
+  /**
+   * Discovers permitted desktop windows and HELIOXEN application windows.
+   */
+  getDesktopWindows: (request?: WindowDiscoveryRequest) => Promise<WindowDiscoveryResult>
+}
+
+import {
+  DirectoryListingRequest,
+  DirectoryListingResult,
+  FileMetadata,
+  FileSearchRequest,
+  FileSearchResult,
+  ReadTextFileRequest,
+  ReadTextFileResult,
+  CreateFileRequest,
+  CreateFileResult,
+  CopyFileRequest,
+  CopyFileResult,
+  MoveFileRequest,
+  MoveFileResult,
+  OrganizationPlanRequest,
+  OrganizationPlan,
+  OrganizationApplyRequest,
+  OrganizationApplyResult,
+  OrganizationUndoRequest,
+  OrganizationUndoResult,
+  ClipboardReadTextResult,
+  ClipboardWriteTextRequest,
+  ClipboardWriteTextResult,
+  ClipboardReadImageResult
+} from '../shared/filesystem/types'
+
+export interface HelioxenFilesystemApi {
+  listDirectory: (request: DirectoryListingRequest) => Promise<DirectoryListingResult>
+  getMetadata: (rootPath: string, filePath: string) => Promise<FileMetadata>
+  searchFiles: (request: FileSearchRequest) => Promise<FileSearchResult>
+  readTextFile: (request: ReadTextFileRequest) => Promise<ReadTextFileResult>
+  createFile: (request: CreateFileRequest) => Promise<CreateFileResult>
+  copyFile: (request: CopyFileRequest) => Promise<CopyFileResult>
+  moveFile: (request: MoveFileRequest) => Promise<MoveFileResult>
+  organizePreview: (request: OrganizationPlanRequest) => Promise<OrganizationPlan>
+  organizeApply: (request: OrganizationApplyRequest) => Promise<OrganizationApplyResult>
+  organizeUndo: (request: OrganizationUndoRequest) => Promise<OrganizationUndoResult>
+}
+
+export interface HelioxenClipboardApi {
+  readText: (maxChars?: number) => Promise<ClipboardReadTextResult>
+  writeText: (request: ClipboardWriteTextRequest) => Promise<ClipboardWriteTextResult>
+  readImage: (maxBytes?: number) => Promise<ClipboardReadImageResult>
+}
+
+import {
+  TargetWindowReference,
+  KeyboardActionRequest,
+  KeyboardActionResult,
+  TextEntryRequest,
+  MouseClickRequest,
+  MouseScrollRequest,
+  MouseActionResult,
+  EmergencyStopResult,
+  UndoInteractionRequest,
+  UndoInteractionResult,
+  SystemOpenPathRequest,
+  SystemOpenPathResult,
+  SystemShowInFolderRequest,
+  SystemShowInFolderResult,
+  SystemOpenUrlRequest,
+  SystemOpenUrlResult,
+  SystemAlertBeepResult,
+  DisplayMetricsResult
+} from '../shared/interaction/types'
+
+export interface HelioxenDesktopApi {
+  focusWindow: (target: TargetWindowReference) => Promise<{ success: boolean; windowId: string }>
+  sendKeyAction: (request: KeyboardActionRequest) => Promise<KeyboardActionResult>
+  sendText: (request: TextEntryRequest) => Promise<KeyboardActionResult>
+  sendClick: (request: MouseClickRequest) => Promise<MouseActionResult>
+  sendScroll: (request: MouseScrollRequest) => Promise<MouseActionResult>
+  emergencyStop: () => Promise<EmergencyStopResult>
+  undoLastAction: (request?: UndoInteractionRequest) => Promise<UndoInteractionResult>
+  openPath: (request: SystemOpenPathRequest) => Promise<SystemOpenPathResult>
+  showInFolder: (request: SystemShowInFolderRequest) => Promise<SystemShowInFolderResult>
+  openExternalUrl: (request: SystemOpenUrlRequest) => Promise<SystemOpenUrlResult>
+  systemAlertBeep: () => Promise<SystemAlertBeepResult>
+  getDisplayMetrics: () => Promise<DisplayMetricsResult>
+}
+
+import {
+  BrowserSessionConfig,
+  BrowserSessionMetadata,
+  BrowserTabState,
+  CreateSessionRequest,
+  CreateTabRequest,
+  NavigateTabRequest,
+  SwitchTabRequest,
+  CloseTabRequest,
+  TabActionRequest,
+  ClearSessionDataRequest,
+  SetBrowserViewBoundsRequest,
+  InspectPageRequest,
+  PageInspectionSnapshot,
+  ClickElementRequest,
+  ScrollPageRequest,
+  FillFieldRequest,
+  SelectOptionRequest,
+  ReviewFormRequest,
+  FormReviewSummary,
+  SubmitFormRequest,
+  BrowserActionResult,
+  DownloadStateRecord,
+  ApproveDownloadRequest,
+  CancelDownloadRequest
+} from '../shared/browser/types'
+
+export interface HelioxenBrowserApi {
+  createSession: (request?: CreateSessionRequest) => Promise<BrowserSessionMetadata>
+  listSessions: () => Promise<BrowserSessionMetadata[]>
+  closeSession: (sessionId: string) => Promise<{ success: boolean; sessionId: string }>
+  clearSession: (request: ClearSessionDataRequest) => Promise<{ success: boolean; sessionId: string }>
+  createTab: (request?: CreateTabRequest) => Promise<BrowserTabState>
+  navigateTab: (request: NavigateTabRequest) => Promise<BrowserTabState>
+  switchTab: (request: SwitchTabRequest) => Promise<BrowserTabState>
+  closeTab: (request: CloseTabRequest) => Promise<{ success: boolean; closedTabId: string; newActiveTabId?: string }>
+  getTabState: (request: TabActionRequest) => Promise<BrowserTabState>
+  listTabs: (sessionId?: string) => Promise<{ tabs: BrowserTabState[] }>
+  reloadTab: (request: TabActionRequest) => Promise<BrowserTabState>
+  stopTab: (request: TabActionRequest) => Promise<BrowserTabState>
+  goBack: (request: TabActionRequest) => Promise<BrowserTabState>
+  goForward: (request: TabActionRequest) => Promise<BrowserTabState>
+  setBounds: (request: SetBrowserViewBoundsRequest) => Promise<{ success: boolean }>
+  // Step 33: Browser Agent Automation & Download Policies
+  inspectPage: (request: InspectPageRequest) => Promise<PageInspectionSnapshot>
+  clickElement: (request: ClickElementRequest) => Promise<BrowserActionResult>
+  scrollPage: (request: ScrollPageRequest) => Promise<BrowserActionResult>
+  fillField: (request: FillFieldRequest) => Promise<BrowserActionResult>
+  selectOption: (request: SelectOptionRequest) => Promise<BrowserActionResult>
+  reviewForm: (request: ReviewFormRequest) => Promise<FormReviewSummary>
+  submitForm: (request: SubmitFormRequest) => Promise<BrowserActionResult>
+  listDownloads: () => Promise<DownloadStateRecord[]>
+  approveDownload: (request: ApproveDownloadRequest) => Promise<DownloadStateRecord>
+  cancelDownload: (request: CancelDownloadRequest) => Promise<DownloadStateRecord>
+}
+
+import {
+  ResearchSearchQuery,
+  ResearchSearchResponse,
+  ResearchExtractionRequest,
+  ResearchSourceRecord,
+  BrowserScreenshotRequest,
+  BrowserScreenshotRecord,
+  ResearchCitation,
+  ValidateCitationsRequest,
+  ResearchCollection
+} from '../shared/research/types'
+
+export interface HelioxenResearchApi {
+  search: (query: ResearchSearchQuery) => Promise<ResearchSearchResponse>
+  extractTab: (request: ResearchExtractionRequest) => Promise<ResearchSourceRecord>
+  extractUrl: (request: ResearchExtractionRequest) => Promise<ResearchSourceRecord>
+  captureScreenshot: (request: BrowserScreenshotRequest) => Promise<BrowserScreenshotRecord>
+  discardScreenshot: (screenshotId: string) => Promise<{ success: boolean; screenshotId: string }>
+  getCollection: (conversationId: string) => Promise<ResearchCollection>
+  updateSourceInclusion: (conversationId: string, sourceId: string, included: boolean) => Promise<ResearchSourceRecord>
+  clearCollection: (conversationId: string) => Promise<{ success: boolean; message: string }>
+  validateCitations: (request: ValidateCitationsRequest) => Promise<ResearchCitation[]>
 }

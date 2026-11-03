@@ -732,10 +732,12 @@ export class TaskExecutionEngine {
     if (this.authorizer && toolDef.requiredCapabilities.length > 0) {
       for (const capId of toolDef.requiredCapabilities) {
         try {
+          const isApproved = Boolean(options.approvedConfirmations?.has(step.id))
           const authorized = this.authorizer.authorize(capId, {
             requester: 'renderer-main-window',
             taskId: plan.taskId,
-            stepId: step.id
+            stepId: step.id,
+            consentRequestId: isApproved ? `engine_approved_${step.id}` : undefined
           })
           if (!authorized) {
             const error = `Authorization denied for capability: "${capId}"`

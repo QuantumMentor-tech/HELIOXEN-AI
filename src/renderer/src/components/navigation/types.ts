@@ -64,7 +64,7 @@ export const NAV_DESTINATIONS: NavItem[] = [
     id: 'settings',
     label: 'Settings',
     description: 'Provider API Routes, Audio Devices & Security Vault',
-    status: 'roadmap',
+    status: 'active',
     section: 'system'
   }
 ]
