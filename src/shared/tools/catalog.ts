@@ -2155,6 +2155,1321 @@ export const ProhibitedShellExecuteTool: ToolDefinition<{ command: string }, { o
   tags: ['shell', 'command', 'prohibited']
 }
 
+// ============================================================================
+// STEP 34: USER PROFILE, LONG-TERM MEMORY & PERSONALIZATION TOOLS
+// ============================================================================
+
+export const MemoryRememberFactTool: ToolDefinition = {
+  id: 'memory:remember_fact',
+  displayName: 'Save Approved Long-Term Memory',
+  description:
+    'Persists an explicit user-approved preference, project constraint, workflow convention, or durable fact to long-term memory when memory consent is enabled.',
+  version: '1.0.0',
+  category: 'workspace',
+  inputSchema: z
+    .object({
+      content: z.string().trim().min(1).max(2000),
+      category: z.enum([
+        'preferences',
+        'projects',
+        'workflows',
+        'reference_facts',
+        'personalization_settings'
+      ]),
+      projectScope: z.string().trim().max(120).optional()
+    })
+    .strict(),
+  outputSchema: z.object({
+    success: z.boolean(),
+    deduplicated: z.boolean(),
+    supersededRecordIds: z.array(z.string()),
+    message: z.string()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      content: {
+        type: 'string',
+        description: 'Minimal normalized memory fact or preference to retain.'
+      },
+      category: {
+        type: 'string',
+        enum: [
+          'preferences',
+          'projects',
+          'workflows',
+          'reference_facts',
+          'personalization_settings'
+        ],
+        description: 'Controlled memory category.'
+      },
+      projectScope: {
+        type: 'string',
+        description: 'Optional project name or identifier scope.'
+      }
+    },
+    required: ['content', 'category']
+  },
+  requiredCapabilities: ['memory:write'],
+  riskTier: 'moderate',
+  confirmationPolicy: 'user_confirmation',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'asynchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: NO_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['memory', 'personalization', 'preferences', 'save']
+}
+
+export const MemoryRetrieveRelevantTool: ToolDefinition = {
+  id: 'memory:retrieve_relevant',
+  displayName: 'Retrieve Relevant Long-Term Memories',
+  description:
+    'Retrieves bounded, relevant active memories for the current user request when long-term memory is enabled.',
+  version: '1.0.0',
+  category: 'workspace',
+  inputSchema: z
+    .object({
+      query: z.string().trim().max(2000),
+      projectScope: z.string().trim().max(120).optional(),
+      maxResults: z.number().int().min(1).max(10).optional()
+    })
+    .strict(),
+  outputSchema: z.object({
+    memoryEnabled: z.boolean(),
+    allowedForProvider: z.boolean(),
+    memories: z.array(z.any()),
+    totalChars: z.number(),
+    formattedContextBlock: z.string()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      query: {
+        type: 'string',
+        description: 'Task or topic query to match against active memories.'
+      },
+      projectScope: {
+        type: 'string',
+        description: 'Optional active project scope.'
+      },
+      maxResults: {
+        type: 'number',
+        description: 'Maximum number of memories to return (1-10).'
+      }
+    },
+    required: ['query']
+  },
+  requiredCapabilities: ['memory:read'],
+  riskTier: 'low',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'synchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: DEFAULT_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['memory', 'retrieve', 'context', 'personalization']
+}
+
+export const MemoryProposeSuggestionTool: ToolDefinition = {
+  id: 'memory:propose_suggestion',
+  displayName: 'Propose Memory Save Suggestion',
+  description:
+    'Proposes a transient memory save suggestion for the user to approve or dismiss in the interface.',
+  version: '1.0.0',
+  category: 'workspace',
+  inputSchema: z
+    .object({
+      proposedContent: z.string().trim().min(1).max(2000),
+      category: z.enum([
+        'preferences',
+        'projects',
+        'workflows',
+        'reference_facts',
+        'personalization_settings'
+      ]),
+      reason: z.string().trim().min(1).max(300),
+      projectScope: z.string().trim().max(120).optional()
+    })
+    .strict(),
+  outputSchema: z.object({
+    id: z.string(),
+    proposedContent: z.string(),
+    category: z.string(),
+    status: z.string()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      proposedContent: {
+        type: 'string',
+        description: 'Proposed durable preference or fact.'
+      },
+      category: {
+        type: 'string',
+        enum: [
+          'preferences',
+          'projects',
+          'workflows',
+          'reference_facts',
+          'personalization_settings'
+        ],
+        description: 'Suggested memory category.'
+      },
+      reason: {
+        type: 'string',
+        description: 'Concise explanation of why this memory may be helpful.'
+      },
+      projectScope: {
+        type: 'string',
+        description: 'Optional project scope.'
+      }
+    },
+    required: ['proposedContent', 'category', 'reason']
+  },
+  requiredCapabilities: ['memory:write'],
+  riskTier: 'moderate',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'synchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: NO_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['memory', 'suggestion', 'personalization']
+}
+
+// ============================================================================
+// STEP 35: INTEGRATED PRODUCTIVITY TOOLS (NOTES, TASKS, REMINDERS, CALENDAR, BRIEFING)
+// ============================================================================
+
+export const NotesCreateTool: ToolDefinition = {
+  id: 'notes:create',
+  displayName: 'Create Note',
+  description: 'Creates a persistent user note with title, markdown body, and optional tags.',
+  category: 'workspace',
+  version: '1.0.0',
+  inputSchema: z.object({
+    title: z.string().trim().min(1).max(200),
+    body: z.string().max(20000).default(''),
+    tags: z.array(z.string().trim().min(1).max(40)).max(20).optional(),
+    pinned: z.boolean().optional()
+  }),
+  outputSchema: z.object({
+    id: z.string(),
+    title: z.string(),
+    createdAt: z.number()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      title: { type: 'string', description: 'Note title.' },
+      body: { type: 'string', description: 'Note content body.' },
+      tags: { type: 'array', items: { type: 'string' }, description: 'Optional tags.' },
+      pinned: { type: 'boolean', description: 'Whether to pin the note.' }
+    },
+    required: ['title']
+  },
+  requiredCapabilities: ['productivity:notes'],
+  riskTier: 'low',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'synchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: NO_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['productivity', 'notes', 'create']
+}
+
+export const NotesSearchTool: ToolDefinition = {
+  id: 'notes:search',
+  displayName: 'Search & List Notes',
+  description: 'Searches or lists user notes by keyword, tag, or pinned state.',
+  category: 'workspace',
+  version: '1.0.0',
+  inputSchema: z.object({
+    query: z.string().trim().max(200).optional(),
+    tag: z.string().trim().max(40).optional(),
+    pinnedOnly: z.boolean().optional(),
+    limit: z.number().int().min(1).max(100).optional()
+  }),
+  outputSchema: z.object({
+    notes: z.array(z.any()),
+    totalCount: z.number()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      query: { type: 'string', description: 'Optional search query.' },
+      tag: { type: 'string', description: 'Optional tag filter.' },
+      pinnedOnly: { type: 'boolean', description: 'Only return pinned notes.' },
+      limit: { type: 'number', description: 'Max notes to return.' }
+    }
+  },
+  requiredCapabilities: ['productivity:notes'],
+  riskTier: 'low',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'synchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: DEFAULT_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['productivity', 'notes', 'search']
+}
+
+export const TasksCreateTool: ToolDefinition = {
+  id: 'tasks:create',
+  displayName: 'Create Task Item',
+  description: 'Creates a tracked task item with optional priority, due timestamp, and tags.',
+  category: 'workspace',
+  version: '1.0.0',
+  inputSchema: z.object({
+    title: z.string().trim().min(1).max(240),
+    description: z.string().trim().max(4000).optional(),
+    priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
+    dueAt: z.number().int().positive().nullable().optional(),
+    tags: z.array(z.string().trim().min(1).max(40)).max(20).optional()
+  }),
+  outputSchema: z.object({
+    id: z.string(),
+    title: z.string(),
+    status: z.string(),
+    priority: z.string()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      title: { type: 'string', description: 'Task title.' },
+      description: { type: 'string', description: 'Optional task description.' },
+      priority: { type: 'string', enum: ['low', 'medium', 'high', 'urgent'] },
+      dueAt: { type: 'number', description: 'Optional due timestamp (ms).' },
+      tags: { type: 'array', items: { type: 'string' } }
+    },
+    required: ['title']
+  },
+  requiredCapabilities: ['productivity:tasks'],
+  riskTier: 'low',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'synchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: NO_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['productivity', 'tasks', 'create']
+}
+
+export const TasksListTool: ToolDefinition = {
+  id: 'tasks:list',
+  displayName: 'List & Filter Tasks',
+  description: 'Lists and filters user tasks by status, priority, overdue state, or search query.',
+  category: 'workspace',
+  version: '1.0.0',
+  inputSchema: z.object({
+    query: z.string().trim().max(200).optional(),
+    status: z.enum(['todo', 'in_progress', 'completed', 'cancelled', 'active_only']).optional(),
+    priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
+    overdueOnly: z.boolean().optional(),
+    dueTodayOnly: z.boolean().optional()
+  }),
+  outputSchema: z.object({
+    tasks: z.array(z.any()),
+    totalCount: z.number()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      query: { type: 'string' },
+      status: { type: 'string', enum: ['todo', 'in_progress', 'completed', 'cancelled', 'active_only'] },
+      priority: { type: 'string', enum: ['low', 'medium', 'high', 'urgent'] },
+      overdueOnly: { type: 'boolean' },
+      dueTodayOnly: { type: 'boolean' }
+    }
+  },
+  requiredCapabilities: ['productivity:tasks'],
+  riskTier: 'low',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'synchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: DEFAULT_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['productivity', 'tasks', 'list']
+}
+
+export const TasksCompleteTool: ToolDefinition = {
+  id: 'tasks:complete',
+  displayName: 'Complete Task (Ambiguity-Safe)',
+  description: 'Completes a task by title or ID; returns candidate list without mutating if title matches multiple tasks.',
+  category: 'workspace',
+  version: '1.0.0',
+  inputSchema: z.object({
+    titleQuery: z.string().trim().min(1).max(240),
+    targetTaskId: z.string().trim().min(1).max(120).optional()
+  }),
+  outputSchema: z.object({
+    status: z.enum(['completed', 'ambiguous', 'not_found']),
+    message: z.string(),
+    completedTask: z.any().optional(),
+    candidates: z.array(z.any()).optional()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      titleQuery: { type: 'string', description: 'Title of the task to mark complete.' },
+      targetTaskId: { type: 'string', description: 'Optional explicit task ID when disambiguated.' }
+    },
+    required: ['titleQuery']
+  },
+  requiredCapabilities: ['productivity:tasks'],
+  riskTier: 'low',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'synchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: NO_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['productivity', 'tasks', 'complete']
+}
+
+export const RemindersCreateTool: ToolDefinition = {
+  id: 'reminders:create',
+  displayName: 'Schedule Reminder',
+  description: 'Schedules a one-time or recurring reminder with time-zone awareness.',
+  category: 'workspace',
+  version: '1.0.0',
+  inputSchema: z.object({
+    title: z.string().trim().min(1).max(240),
+    description: z.string().trim().max(2000).optional(),
+    dueAt: z.number().int().positive(),
+    timeZone: z.string().trim().optional(),
+    frequency: z.enum(['none', 'daily', 'weekly']).optional()
+  }),
+  outputSchema: z.object({
+    id: z.string(),
+    title: z.string(),
+    dueAt: z.number(),
+    status: z.string()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      title: { type: 'string' },
+      description: { type: 'string' },
+      dueAt: { type: 'number', description: 'Reminder due epoch timestamp (ms).' },
+      timeZone: { type: 'string', description: 'IANA time zone.' },
+      frequency: { type: 'string', enum: ['none', 'daily', 'weekly'] }
+    },
+    required: ['title', 'dueAt']
+  },
+  requiredCapabilities: ['productivity:reminders'],
+  riskTier: 'moderate',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'synchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: NO_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['productivity', 'reminders', 'schedule']
+}
+
+export const RemindersManageTool: ToolDefinition = {
+  id: 'reminders:manage',
+  displayName: 'Manage Reminder (Snooze, Dismiss, Cancel)',
+  description: 'Snoozes, dismisses/acknowledges, or cancels an existing reminder.',
+  category: 'workspace',
+  version: '1.0.0',
+  inputSchema: z.object({
+    id: z.string().trim().min(1).max(120),
+    action: z.enum(['snooze', 'dismiss', 'cancel']),
+    durationMinutes: z.number().int().min(1).max(10080).optional()
+  }),
+  outputSchema: z.object({
+    id: z.string(),
+    status: z.string(),
+    dueAt: z.number()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      id: { type: 'string' },
+      action: { type: 'string', enum: ['snooze', 'dismiss', 'cancel'] },
+      durationMinutes: { type: 'number' }
+    },
+    required: ['id', 'action']
+  },
+  requiredCapabilities: ['productivity:reminders'],
+  riskTier: 'moderate',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'synchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: NO_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['productivity', 'reminders', 'manage']
+}
+
+export const CalendarListEventsTool: ToolDefinition = {
+  id: 'calendar:list_events',
+  displayName: 'List Calendar Events',
+  description: 'Lists calendar events for a date key (YYYY-MM-DD) or timestamp range.',
+  category: 'workspace',
+  version: '1.0.0',
+  inputSchema: z.object({
+    dateKey: z.string().trim().optional(),
+    rangeStartAt: z.number().int().positive().optional(),
+    rangeEndAt: z.number().int().positive().optional(),
+    query: z.string().trim().max(200).optional()
+  }),
+  outputSchema: z.object({
+    events: z.array(z.any()),
+    totalCount: z.number()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      dateKey: { type: 'string', description: 'Optional YYYY-MM-DD date key.' },
+      rangeStartAt: { type: 'number' },
+      rangeEndAt: { type: 'number' },
+      query: { type: 'string' }
+    }
+  },
+  requiredCapabilities: ['productivity:calendarLocal'],
+  riskTier: 'low',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'synchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: DEFAULT_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['productivity', 'calendar', 'list']
+}
+
+export const CalendarCreateEventTool: ToolDefinition = {
+  id: 'calendar:create_event',
+  displayName: 'Create Local Calendar Event',
+  description: 'Creates a timed or all-day event on the local HELIOXEN calendar.',
+  category: 'workspace',
+  version: '1.0.0',
+  inputSchema: z.object({
+    title: z.string().trim().min(1).max(240),
+    description: z.string().trim().max(4000).optional(),
+    startAt: z.number().int().positive().optional(),
+    endAt: z.number().int().positive().optional(),
+    allDay: z.boolean().optional(),
+    allDayStartDate: z.string().trim().optional(),
+    allDayEndDate: z.string().trim().optional(),
+    timeZone: z.string().trim().optional(),
+    location: z.string().trim().max(300).optional()
+  }),
+  outputSchema: z.object({
+    id: z.string(),
+    title: z.string(),
+    startAt: z.number(),
+    endAt: z.number()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      title: { type: 'string' },
+      description: { type: 'string' },
+      startAt: { type: 'number' },
+      endAt: { type: 'number' },
+      allDay: { type: 'boolean' },
+      allDayStartDate: { type: 'string' },
+      allDayEndDate: { type: 'string' },
+      timeZone: { type: 'string' },
+      location: { type: 'string' }
+    },
+    required: ['title']
+  },
+  requiredCapabilities: ['productivity:calendarLocal'],
+  riskTier: 'moderate',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'synchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: NO_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['productivity', 'calendar', 'create']
+}
+
+export const CalendarModifyExternalEventTool: ToolDefinition = {
+  id: 'calendar:modify_external_event',
+  displayName: 'Modify or Delete External Calendar Event',
+  description: 'Modifies or deletes an event on a connected external calendar provider under explicit human confirmation.',
+  category: 'workspace',
+  version: '1.0.0',
+  inputSchema: z.object({
+    id: z.string().trim().min(1).max(120),
+    action: z.enum(['update', 'delete']),
+    title: z.string().trim().min(1).max(240).optional(),
+    startAt: z.number().int().positive().optional(),
+    endAt: z.number().int().positive().optional(),
+    recurrenceScope: z.enum(['single_occurrence', 'entire_series']).optional(),
+    humanConfirmed: z.boolean().default(true)
+  }),
+  outputSchema: z.object({
+    success: z.boolean(),
+    id: z.string(),
+    action: z.string()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      id: { type: 'string' },
+      action: { type: 'string', enum: ['update', 'delete'] },
+      title: { type: 'string' },
+      startAt: { type: 'number' },
+      endAt: { type: 'number' },
+      recurrenceScope: { type: 'string', enum: ['single_occurrence', 'entire_series'] },
+      humanConfirmed: { type: 'boolean' }
+    },
+    required: ['id', 'action']
+  },
+  requiredCapabilities: ['productivity:calendarExternalWrite'],
+  riskTier: 'high',
+  confirmationPolicy: 'user_confirmation',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'synchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: NO_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['productivity', 'calendar', 'external', 'high-risk']
+}
+
+export const BriefingGenerateTool: ToolDefinition = {
+  id: 'briefing:generate',
+  displayName: 'Generate Daily Briefing',
+  description: 'Generates a grounded daily briefing from actual calendar events, tasks, reminders, and notes.',
+  category: 'workspace',
+  version: '1.0.0',
+  inputSchema: z.object({
+    dateKey: z.string().trim().optional(),
+    forceRegenerate: z.boolean().optional()
+  }),
+  outputSchema: z.object({
+    id: z.string(),
+    dateKey: z.string(),
+    summaryText: z.string(),
+    isEmpty: z.boolean()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      dateKey: { type: 'string', description: 'Optional YYYY-MM-DD date key.' },
+      forceRegenerate: { type: 'boolean' }
+    }
+  },
+  requiredCapabilities: ['productivity:briefing'],
+  riskTier: 'low',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'synchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: DEFAULT_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['productivity', 'briefing', 'summary']
+}
+
+// ============================================================================
+// STEP 36: MEDIA GALLERY AND MEDIA ASSET MANAGEMENT TOOLS
+// ============================================================================
+
+export const MediaListAssetsTool: ToolDefinition = {
+  id: 'media:list_assets',
+  displayName: 'Search & List Media Gallery Assets',
+  description: 'Searches and filters media assets in the Media Gallery by query, mediaType, tag, collection, or favorites.',
+  category: 'media',
+  version: '1.0.0',
+  inputSchema: z.object({
+    query: z.string().trim().max(200).optional(),
+    mediaType: z.enum(['all', 'image', 'video', 'audio']).optional(),
+    collectionId: z.string().trim().max(120).optional(),
+    tag: z.string().trim().max(40).optional(),
+    favoritesOnly: z.boolean().optional(),
+    limit: z.number().int().min(1).max(200).optional()
+  }),
+  outputSchema: z.object({
+    assets: z.array(z.any()),
+    totalCount: z.number()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      query: { type: 'string' },
+      mediaType: { type: 'string', enum: ['all', 'image', 'video', 'audio'] },
+      collectionId: { type: 'string' },
+      tag: { type: 'string' },
+      favoritesOnly: { type: 'boolean' },
+      limit: { type: 'number' }
+    }
+  },
+  requiredCapabilities: ['media:read'],
+  riskTier: 'low',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'synchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: DEFAULT_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['media', 'gallery', 'search']
+}
+
+export const MediaUpdateMetadataTool: ToolDefinition = {
+  id: 'media:update_metadata',
+  displayName: 'Update Media Asset Metadata',
+  description: 'Updates a media asset display name, description, tags, or favorite status without altering the source file.',
+  category: 'media',
+  version: '1.0.0',
+  inputSchema: z.object({
+    id: z.string().trim().min(1).max(120),
+    displayName: z.string().trim().min(1).max(200).optional(),
+    description: z.string().trim().max(2000).optional(),
+    tags: z.array(z.string().trim().min(1).max(40)).max(20).optional(),
+    favorite: z.boolean().optional()
+  }),
+  outputSchema: z.object({
+    id: z.string(),
+    displayName: z.string(),
+    favorite: z.boolean()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      id: { type: 'string' },
+      displayName: { type: 'string' },
+      description: { type: 'string' },
+      tags: { type: 'array', items: { type: 'string' } },
+      favorite: { type: 'boolean' }
+    },
+    required: ['id']
+  },
+  requiredCapabilities: ['media:organize'],
+  riskTier: 'low',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'synchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: NO_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['media', 'gallery', 'metadata']
+}
+
+export const MediaManageCollectionsTool: ToolDefinition = {
+  id: 'media:manage_collections',
+  displayName: 'Manage Media Collections',
+  description: 'Creates, lists, or modifies asset membership in Media Gallery collections.',
+  category: 'media',
+  version: '1.0.0',
+  inputSchema: z.object({
+    action: z.enum(['list', 'create', 'add_assets', 'remove_assets', 'delete']),
+    name: z.string().trim().min(1).max(100).optional(),
+    collectionId: z.string().trim().min(1).max(120).optional(),
+    assetIds: z.array(z.string().trim().min(1).max(120)).optional()
+  }),
+  outputSchema: z.object({
+    success: z.boolean(),
+    collections: z.array(z.any()).optional(),
+    collection: z.any().optional()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      action: { type: 'string', enum: ['list', 'create', 'add_assets', 'remove_assets', 'delete'] },
+      name: { type: 'string' },
+      collectionId: { type: 'string' },
+      assetIds: { type: 'array', items: { type: 'string' } }
+    },
+    required: ['action']
+  },
+  requiredCapabilities: ['media:organize'],
+  riskTier: 'low',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'synchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: NO_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['media', 'collections', 'organize']
+}
+
+export const MediaRemoveAssetTool: ToolDefinition = {
+  id: 'media:remove_asset',
+  displayName: 'Remove Media Entry from Library',
+  description: 'Removes an asset entry from the Media Gallery while preserving any external source file.',
+  category: 'media',
+  version: '1.0.0',
+  inputSchema: z.object({
+    id: z.string().trim().min(1).max(120)
+  }),
+  outputSchema: z.object({
+    removed: z.boolean(),
+    id: z.string(),
+    originalExternalFilePreserved: z.boolean()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      id: { type: 'string' }
+    },
+    required: ['id']
+  },
+  requiredCapabilities: ['media:remove'],
+  riskTier: 'moderate',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'synchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: NO_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['media', 'gallery', 'remove']
+}
+
+export const MediaDeleteManagedAssetTool: ToolDefinition = {
+  id: 'media:delete_managed_asset',
+  displayName: 'Permanently Delete Managed Media Asset',
+  description: 'Permanently deletes an application-managed media copy and its thumbnail under explicit human confirmation.',
+  category: 'media',
+  version: '1.0.0',
+  inputSchema: z.object({
+    id: z.string().trim().min(1).max(120),
+    confirmPermanentDelete: z.boolean().default(true)
+  }),
+  outputSchema: z.object({
+    deleted: z.boolean(),
+    id: z.string(),
+    managedFileDeleted: z.boolean()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      id: { type: 'string' },
+      confirmPermanentDelete: { type: 'boolean' }
+    },
+    required: ['id']
+  },
+  requiredCapabilities: ['media:deletePermanent'],
+  riskTier: 'high',
+  confirmationPolicy: 'user_confirmation',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'synchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: NO_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['media', 'gallery', 'delete', 'high-risk']
+}
+
+// ============================================================================
+// Step 37: VisualHub, Mermaid Visualization, and AI Image Generation Tools
+// ============================================================================
+
+export const VisualRenderMermaidTool: ToolDefinition = {
+  id: 'visual:render_mermaid',
+  displayName: 'Validate & Render Mermaid Diagram',
+  description: 'Validates Mermaid diagram source syntax against strict security controls and generates a sanitized SVG preview.',
+  category: 'workspace',
+  version: '1.0.0',
+  inputSchema: z.object({
+    sourceText: z.string().min(1).max(200000),
+    title: z.string().trim().max(180).optional()
+  }),
+  outputSchema: z.object({
+    valid: z.boolean(),
+    diagramType: z.string(),
+    nodeCount: z.number(),
+    edgeCount: z.number(),
+    diagnostics: z.array(z.any()),
+    svgMarkup: z.string().optional()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      sourceText: { type: 'string', description: 'Mermaid diagram source text.' },
+      title: { type: 'string', description: 'Optional diagram title.' }
+    },
+    required: ['sourceText']
+  },
+  requiredCapabilities: ['visual:mermaid'],
+  riskTier: 'low',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'synchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: DEFAULT_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['visual', 'mermaid', 'diagram', 'svg']
+}
+
+export const VisualExportDiagramTool: ToolDefinition = {
+  id: 'visual:export_diagram',
+  displayName: 'Export Mermaid Diagram (.mmd, .svg, .png)',
+  description: 'Exports a validated Mermaid diagram to an approved destination path in .mmd, .svg, or .png format.',
+  category: 'workspace',
+  version: '1.0.0',
+  inputSchema: z.object({
+    title: z.string().trim().min(1).max(180).default('Untitled Diagram'),
+    sourceText: z.string().min(1).max(200000),
+    format: z.enum(['mmd', 'svg', 'png']),
+    destinationPath: z.string().trim().min(1).max(1024).optional(),
+    conflictPolicy: z.enum(['rename_with_suffix', 'overwrite', 'reject']).default('rename_with_suffix')
+  }),
+  outputSchema: z.object({
+    exported: z.boolean(),
+    format: z.enum(['mmd', 'svg', 'png']),
+    destinationPath: z.string(),
+    fileName: z.string(),
+    sizeBytes: z.number()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      title: { type: 'string' },
+      sourceText: { type: 'string' },
+      format: { type: 'string', enum: ['mmd', 'svg', 'png'] },
+      destinationPath: { type: 'string' },
+      conflictPolicy: { type: 'string', enum: ['rename_with_suffix', 'overwrite', 'reject'] }
+    },
+    required: ['sourceText', 'format']
+  },
+  requiredCapabilities: ['visual:exportDiagram'],
+  riskTier: 'moderate',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'synchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: NO_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['visual', 'mermaid', 'export', 'diagram']
+}
+
+export const VisualGenerateImageTool: ToolDefinition = {
+  id: 'visual:generate_image',
+  displayName: 'Generate AI Image via Verified Provider',
+  description: 'Submits an explicit user-confirmed image generation request to a verified AI provider adapter.',
+  category: 'media',
+  version: '1.0.0',
+  inputSchema: z.object({
+    providerId: z.enum(['google-gemini', 'openai']),
+    modelId: z.string().trim().min(1).max(120),
+    prompt: z.string().trim().min(1).max(4000),
+    aspectRatio: z.enum(['1:1', '16:9', '9:16', '4:3', '3:4']).default('1:1'),
+    resolutionTier: z.enum(['1K', '2K', '4K']).optional(),
+    sizePreset: z.enum(['1024x1024', '1536x1024', '1024x1536']).optional(),
+    quality: z.enum(['low', 'medium', 'high', 'standard']).optional(),
+    outputFormat: z.enum(['png', 'jpeg', 'webp']).default('png'),
+    transparentBackground: z.boolean().default(false),
+    externalTransmissionConfirmed: z.boolean().default(true)
+  }),
+  outputSchema: z.object({
+    id: z.string(),
+    status: z.string(),
+    providerId: z.string(),
+    modelId: z.string(),
+    candidates: z.array(z.any())
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      providerId: { type: 'string', enum: ['google-gemini', 'openai'] },
+      modelId: { type: 'string' },
+      prompt: { type: 'string' },
+      aspectRatio: { type: 'string', enum: ['1:1', '16:9', '9:16', '4:3', '3:4'] },
+      outputFormat: { type: 'string', enum: ['png', 'jpeg', 'webp'] },
+      externalTransmissionConfirmed: { type: 'boolean' }
+    },
+    required: ['providerId', 'modelId', 'prompt']
+  },
+  requiredCapabilities: ['visual:generateImage'],
+  riskTier: 'moderate',
+  confirmationPolicy: 'user_confirmation',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'asynchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: NO_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['visual', 'image', 'ai', 'generation']
+}
+
+export const VisualSaveToGalleryTool: ToolDefinition = {
+  id: 'visual:save_to_gallery',
+  displayName: 'Save Generated Image to Media Gallery',
+  description: 'Explicitly persists a generated image candidate into the Step 36 Media Gallery with provenance metadata.',
+  category: 'media',
+  version: '1.0.0',
+  inputSchema: z.object({
+    candidateId: z.string().trim().min(1).max(120),
+    displayName: z.string().trim().min(1).max(180).optional(),
+    tags: z.array(z.string().trim().min(1).max(60)).max(25).default([]),
+    collectionIds: z.array(z.string().trim().min(1).max(120)).max(50).default([]),
+    favorite: z.boolean().default(false)
+  }),
+  outputSchema: z.object({
+    saved: z.boolean(),
+    candidateId: z.string(),
+    mediaAssetId: z.string()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      candidateId: { type: 'string' },
+      displayName: { type: 'string' },
+      tags: { type: 'array', items: { type: 'string' } },
+      favorite: { type: 'boolean' }
+    },
+    required: ['candidateId']
+  },
+  requiredCapabilities: ['visual:saveToGallery'],
+  riskTier: 'moderate',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'synchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: NO_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['visual', 'media', 'gallery', 'save']
+}
+
+// ============================================================================
+// Step 38: World Monitor, Interactive Globe, Maps, and News Intelligence Tools
+// ============================================================================
+
+export const WorldQueryNewsFeedTool: ToolDefinition = {
+  id: 'world:query_news_feed',
+  displayName: 'Query World Monitor News Feed & Geographic Markers',
+  description: 'Searches and filters normalized source-attributed news records, story clusters, and validated map markers.',
+  category: 'workspace',
+  version: '1.0.0',
+  inputSchema: z.object({
+    searchQuery: z.string().trim().max(240).optional(),
+    category: z.enum(['all', 'world', 'technology', 'science', 'economy', 'environment', 'policy', 'general']).default('all'),
+    regionId: z.enum(['all', 'global', 'north_america', 'south_america', 'europe', 'middle_east_north_africa', 'sub_saharan_africa', 'south_central_asia', 'east_southeast_asia', 'oceania', 'polar_maritime']).default('all'),
+    pageSize: z.number().int().min(1).max(50).default(20)
+  }),
+  outputSchema: z.object({
+    totalMatchingCount: z.number(),
+    articles: z.array(z.any()),
+    markers: z.array(z.any()),
+    freshnessState: z.string()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      searchQuery: { type: 'string' },
+      category: { type: 'string' },
+      regionId: { type: 'string' },
+      pageSize: { type: 'integer' }
+    },
+    required: []
+  },
+  requiredCapabilities: ['world:read'],
+  riskTier: 'low',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'synchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: DEFAULT_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['world', 'news', 'globe', 'map', 'geospatial']
+}
+
+export const WorldSearchLocationsTool: ToolDefinition = {
+  id: 'world:search_locations',
+  displayName: 'Search World Monitor Geographic Gazetteer',
+  description: 'Searches validated cities, countries, and macro-regions in the World Monitor gazetteer, identifying ambiguous homonyms.',
+  category: 'workspace',
+  version: '1.0.0',
+  inputSchema: z.object({
+    query: z.string().trim().min(1).max(160),
+    limit: z.number().int().min(1).max(25).default(10)
+  }),
+  outputSchema: z.object({
+    query: z.string(),
+    candidates: z.array(z.any()),
+    isAmbiguous: z.boolean()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      query: { type: 'string' },
+      limit: { type: 'integer' }
+    },
+    required: ['query']
+  },
+  requiredCapabilities: ['world:read'],
+  riskTier: 'low',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'synchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: DEFAULT_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['world', 'map', 'location', 'gazetteer']
+}
+
+export const WorldRefreshNewsFeedTool: ToolDefinition = {
+  id: 'world:refresh_news_feed',
+  displayName: 'Refresh Authorized World Monitor News Sources',
+  description: 'Fetches bounded metadata updates from approved public news and science feeds while respecting rate limits.',
+  category: 'workspace',
+  version: '1.0.0',
+  inputSchema: z.object({
+    searchQuery: z.string().trim().max(200).optional(),
+    forceRefresh: z.boolean().default(false)
+  }),
+  outputSchema: z.object({
+    refreshedAt: z.number(),
+    freshnessState: z.string(),
+    totalArticles: z.number(),
+    newArticlesCount: z.number(),
+    warnings: z.array(z.string())
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      searchQuery: { type: 'string' },
+      forceRefresh: { type: 'boolean' }
+    },
+    required: []
+  },
+  requiredCapabilities: ['world:refreshFeed'],
+  riskTier: 'moderate',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'asynchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: NO_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['world', 'news', 'refresh', 'feeds']
+}
+
+export const WidgetsGetSystemHealthTool: ToolDefinition = {
+  id: 'widgets:get_system_health',
+  displayName: 'Get System Health & Process Telemetry',
+  description: 'Returns local OS and HELIOXEN process memory, CPU utilization, battery status, and process health.',
+  category: 'system',
+  version: '1.0.0',
+  inputSchema: z.object({
+    sampleDurationMs: z.number().int().min(50).max(1000).optional()
+  }),
+  outputSchema: z.object({
+    acquiredAt: z.number(),
+    host: z.any(),
+    helioxenProcess: z.any(),
+    powerAndSensors: z.any(),
+    storage: z.any()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      sampleDurationMs: { type: 'integer' }
+    },
+    required: []
+  },
+  requiredCapabilities: ['widgets:readSystemHealth'],
+  riskTier: 'low',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'asynchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: DEFAULT_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['system', 'health', 'metrics', 'cpu', 'memory', 'battery']
+}
+
+export const WidgetsRunNetworkDiagnosticTool: ToolDefinition = {
+  id: 'widgets:run_network_diagnostic',
+  displayName: 'Run Bounded Network Diagnostic',
+  description: 'Executes a bounded HTTPS connectivity request to an approved endpoint measuring round-trip time.',
+  category: 'system',
+  version: '1.0.0',
+  inputSchema: z.object({
+    targetUrl: z.string().url().max(500).optional(),
+    timeoutMs: z.number().int().min(1000).max(30000).optional()
+  }),
+  outputSchema: z.object({
+    testId: z.string(),
+    targetUrl: z.string(),
+    targetHost: z.string(),
+    status: z.string(),
+    statusCode: z.number().nullable(),
+    roundTripTimeMs: z.number().nullable(),
+    diagnosticBasis: z.string(),
+    disclaimer: z.string()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      targetUrl: { type: 'string' },
+      timeoutMs: { type: 'integer' }
+    },
+    required: []
+  },
+  requiredCapabilities: ['widgets:runNetworkDiagnostic'],
+  riskTier: 'low',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'asynchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: NO_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['network', 'diagnostic', 'connectivity', 'latency']
+}
+
+export const WidgetsGetWeatherForecastTool: ToolDefinition = {
+  id: 'widgets:get_weather_forecast',
+  displayName: 'Get Weather Forecast & Current Conditions',
+  description: 'Retrieves current weather conditions, 24h hourly forecast, and 7-day forecast for a selected location.',
+  category: 'workspace',
+  version: '1.0.0',
+  inputSchema: z.object({
+    temperatureUnit: z.enum(['celsius', 'fahrenheit']).optional(),
+    windSpeedUnit: z.enum(['kmh', 'mph']).optional(),
+    forceRefresh: z.boolean().optional()
+  }),
+  outputSchema: z.object({
+    location: z.any(),
+    current: z.any(),
+    hourly: z.array(z.any()),
+    daily: z.array(z.any()),
+    freshnessStatus: z.string(),
+    attributionText: z.string()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      temperatureUnit: { type: 'string', enum: ['celsius', 'fahrenheit'] },
+      windSpeedUnit: { type: 'string', enum: ['kmh', 'mph'] },
+      forceRefresh: { type: 'boolean' }
+    },
+    required: []
+  },
+  requiredCapabilities: ['widgets:readWeather'],
+  riskTier: 'low',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'asynchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: DEFAULT_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['weather', 'forecast', 'temperature', 'conditions']
+}
+
+/**
+ * Tool: agents:list_available
+ */
+export const AgentsListAvailableTool: ToolDefinition<
+  { category?: string },
+  { agents: Array<{ id: string; name: string; role: string; status: string; enabled: boolean }> }
+> = {
+  id: 'agents:list_available',
+  displayName: 'List Available Agents',
+  description: 'Lists active and registered agents, their eligible capabilities, and current status.',
+  category: 'system',
+  version: '1.0.0',
+  inputSchema: z.object({
+    category: z.string().optional()
+  }),
+  outputSchema: z.object({
+    agents: z.array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        role: z.string(),
+        status: z.string(),
+        enabled: z.boolean()
+      })
+    )
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      category: { type: 'string', description: 'Optional agent category filter.' }
+    },
+    required: []
+  },
+  requiredCapabilities: ['agents:read'],
+  riskTier: 'low',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'asynchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: DEFAULT_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['agents', 'registry', 'town', 'capabilities']
+}
+
+/**
+ * Tool: skills:execute_skill
+ */
+export const SkillsExecuteSkillTool: ToolDefinition<
+  { skillId: string; parameters?: Record<string, unknown> },
+  { success: boolean; skillId: string; outputs: Record<string, unknown>; durationMs: number; error?: string }
+> = {
+  id: 'skills:execute_skill',
+  displayName: 'Execute Dynamic Skill',
+  description: 'Executes an approved declarative dynamic skill with input parameters through the orchestration engine.',
+  category: 'system',
+  version: '1.0.0',
+  inputSchema: z.object({
+    skillId: z.string().min(1),
+    parameters: z.record(z.string(), z.unknown()).optional()
+  }),
+  outputSchema: z.object({
+    success: z.boolean(),
+    skillId: z.string(),
+    outputs: z.record(z.string(), z.unknown()),
+    durationMs: z.number(),
+    error: z.string().optional()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      skillId: { type: 'string', description: 'Identifier of the approved skill to execute.' },
+      parameters: { type: 'object', description: 'Input parameter values for the skill.' }
+    },
+    required: ['skillId']
+  },
+  requiredCapabilities: ['skills:execute'],
+  riskTier: 'high',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'asynchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: DEFAULT_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['skills', 'workflow', 'orchestration', 'execute']
+}
+
 export const BUILTIN_TOOL_CATALOG: readonly ToolDefinition[] = [
   SystemGetTimeTool,
   WorkspaceGetContextSummaryTool,
@@ -2214,5 +3529,36 @@ export const BUILTIN_TOOL_CATALOG: readonly ToolDefinition[] = [
   BrowserReviewFormTool,
   BrowserSubmitFormTool,
   BrowserManageDownloadsTool,
+  MemoryRememberFactTool,
+  MemoryRetrieveRelevantTool,
+  MemoryProposeSuggestionTool,
+  NotesCreateTool,
+  NotesSearchTool,
+  TasksCreateTool,
+  TasksListTool,
+  TasksCompleteTool,
+  RemindersCreateTool,
+  RemindersManageTool,
+  CalendarListEventsTool,
+  CalendarCreateEventTool,
+  CalendarModifyExternalEventTool,
+  BriefingGenerateTool,
+  MediaListAssetsTool,
+  MediaUpdateMetadataTool,
+  MediaManageCollectionsTool,
+  MediaRemoveAssetTool,
+  MediaDeleteManagedAssetTool,
+  VisualRenderMermaidTool,
+  VisualExportDiagramTool,
+  VisualGenerateImageTool,
+  VisualSaveToGalleryTool,
+  WorldQueryNewsFeedTool,
+  WorldSearchLocationsTool,
+  WorldRefreshNewsFeedTool,
+  WidgetsGetSystemHealthTool,
+  WidgetsRunNetworkDiagnosticTool,
+  WidgetsGetWeatherForecastTool,
+  AgentsListAvailableTool,
+  SkillsExecuteSkillTool,
   ProhibitedShellExecuteTool
 ] as const

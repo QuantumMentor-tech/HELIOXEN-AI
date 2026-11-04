@@ -114,6 +114,19 @@ import {
   fileOrganizationManager,
   clipboardManager
 } from './filesystem'
+import { memoryService } from './memory'
+import { productivityService } from './productivity'
+import { mediaLibraryService } from './media'
+import { visualHubService, setVisualHubProviderServiceGetter } from './visual'
+import { sanitizeSuggestedFileName } from '../shared/visual'
+import { worldMonitorService } from './world'
+import {
+  systemHealthService,
+  networkMonitorService,
+  weatherService,
+  widgetPreferencesManager
+} from './widgets'
+import { agentTownService, setAgentTownProviderServiceGetter } from './agents'
 
 // Global window reference
 let mainWindow: BrowserWindow | null = null
@@ -1053,6 +1066,836 @@ export function registerAiAndCredentialIpcHandlers(): void {
     const valid = validateIpcPayload(CancelDownloadRequestSchema, payload || {})
     return browserDownloadManager.cancelDownload(valid)
   })
+
+  // User Profile, Long-Term Memory & Consent-Based Personalization (Phase 12 Step 34)
+  ipcMain.handle(IPC_CHANNELS.MEMORY_GET_STATE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('memory:read', { requester: 'renderer-main-window' })
+    return memoryService.getStateOverview(payload?.profileId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.MEMORY_SET_CONSENT, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('memory:manageConsent', { requester: 'renderer-main-window' })
+    return await memoryService.setConsent(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.MEMORY_UPDATE_PROFILE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('memory:write', { requester: 'renderer-main-window' })
+    return await memoryService.updateProfile(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.MEMORY_CREATE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('memory:write', { requester: 'renderer-main-window' })
+    return await memoryService.createMemory(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.MEMORY_LIST, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('memory:read', { requester: 'renderer-main-window' })
+    return memoryService.listMemories(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.MEMORY_GET, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('memory:read', { requester: 'renderer-main-window' })
+    return memoryService.getMemory(payload?.id, payload?.profileId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.MEMORY_UPDATE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('memory:write', { requester: 'renderer-main-window' })
+    return await memoryService.updateMemory(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.MEMORY_DELETE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('memory:delete', { requester: 'renderer-main-window' })
+    return await memoryService.deleteMemory(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.MEMORY_CLEAR_ALL, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('memory:clearAll', {
+      requester: 'renderer-main-window',
+      consentRequestId:
+        payload?.consentRequestId || (payload?.confirmClearAll ? 'engine_approved_clear_all_memories' : undefined)
+    })
+    return await memoryService.clearAllMemories(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.MEMORY_RETRIEVE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('memory:read', { requester: 'renderer-main-window' })
+    return memoryService.retrieveMemories(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.MEMORY_PROPOSE_SUGGESTION, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('memory:write', { requester: 'renderer-main-window' })
+    return memoryService.proposeSuggestion(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.MEMORY_RESOLVE_SUGGESTION, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('memory:write', { requester: 'renderer-main-window' })
+    return await memoryService.resolveSuggestion(payload)
+  })
+
+  // Integrated Productivity System: Notes, Tasks, Reminders, Calendar, and Daily Briefings (Phase 12 Step 35)
+  ipcMain.handle(IPC_CHANNELS.PRODUCTIVITY_GET_OVERVIEW, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('productivity:briefing', { requester: 'renderer-main-window' })
+    return productivityService.getOverviewSnapshot(payload?.profileId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PRODUCTIVITY_UPDATE_SETTINGS, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('productivity:briefing', { requester: 'renderer-main-window' })
+    return productivityService.updateSettings(payload || {})
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PRODUCTIVITY_NOTE_CREATE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('productivity:notes', { requester: 'renderer-main-window' })
+    return productivityService.createNote(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PRODUCTIVITY_NOTE_LIST, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('productivity:notes', { requester: 'renderer-main-window' })
+    return productivityService.listNotes(payload || {})
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PRODUCTIVITY_NOTE_UPDATE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('productivity:notes', { requester: 'renderer-main-window' })
+    return productivityService.updateNote(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PRODUCTIVITY_NOTE_DELETE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('productivity:notes', { requester: 'renderer-main-window' })
+    return productivityService.deleteNote(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PRODUCTIVITY_TASK_CREATE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('productivity:tasks', { requester: 'renderer-main-window' })
+    return productivityService.createTask(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PRODUCTIVITY_TASK_LIST, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('productivity:tasks', { requester: 'renderer-main-window' })
+    return productivityService.listTasks(payload || {})
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PRODUCTIVITY_TASK_UPDATE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('productivity:tasks', { requester: 'renderer-main-window' })
+    return productivityService.updateTask(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PRODUCTIVITY_TASK_COMPLETE_BY_TITLE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('productivity:tasks', { requester: 'renderer-main-window' })
+    return productivityService.completeTaskByTitle(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PRODUCTIVITY_TASK_DELETE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('productivity:tasks', { requester: 'renderer-main-window' })
+    return productivityService.deleteTask(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PRODUCTIVITY_REMINDER_CREATE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('productivity:reminders', { requester: 'renderer-main-window' })
+    return productivityService.createReminder(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PRODUCTIVITY_REMINDER_LIST, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('productivity:reminders', { requester: 'renderer-main-window' })
+    return productivityService.listReminders(payload || {})
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PRODUCTIVITY_REMINDER_UPDATE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('productivity:reminders', { requester: 'renderer-main-window' })
+    return productivityService.updateReminder(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PRODUCTIVITY_REMINDER_SNOOZE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('productivity:reminders', { requester: 'renderer-main-window' })
+    return productivityService.snoozeReminder(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PRODUCTIVITY_REMINDER_DISMISS, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('productivity:reminders', { requester: 'renderer-main-window' })
+    return productivityService.dismissReminder(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PRODUCTIVITY_REMINDER_CANCEL, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('productivity:reminders', { requester: 'renderer-main-window' })
+    return productivityService.cancelReminder(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PRODUCTIVITY_REMINDER_DELETE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('productivity:reminders', { requester: 'renderer-main-window' })
+    return productivityService.deleteReminder(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PRODUCTIVITY_CALENDAR_CREATE_EVENT, async (event, payload) => {
+    assertValidSender(event)
+    const isExternal = payload?.providerId && payload.providerId !== 'local'
+    if (isExternal) {
+      authorizer.authorize('productivity:calendarExternalWrite', {
+        requester: 'renderer-main-window',
+        consentRequestId: payload?.humanConfirmed ? 'engine_approved_calendar_write' : undefined
+      })
+    } else {
+      authorizer.authorize('productivity:calendarLocal', { requester: 'renderer-main-window' })
+    }
+    return await productivityService.createCalendarEvent(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PRODUCTIVITY_CALENDAR_LIST_EVENTS, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('productivity:calendarLocal', { requester: 'renderer-main-window' })
+    return productivityService.listCalendarEvents(payload || {})
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PRODUCTIVITY_CALENDAR_UPDATE_EVENT, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('productivity:calendarLocal', { requester: 'renderer-main-window' })
+    return await productivityService.updateCalendarEvent(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PRODUCTIVITY_CALENDAR_DELETE_EVENT, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('productivity:calendarLocal', { requester: 'renderer-main-window' })
+    return await productivityService.deleteCalendarEvent(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PRODUCTIVITY_CALENDAR_CONNECT_PROVIDER, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('productivity:calendarExternalWrite', {
+      requester: 'renderer-main-window',
+      consentRequestId: 'engine_approved_calendar_connect'
+    })
+    return await productivityService.connectExternalCalendar(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PRODUCTIVITY_CALENDAR_DISCONNECT_PROVIDER, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('productivity:calendarLocal', { requester: 'renderer-main-window' })
+    return productivityService.disconnectExternalCalendar(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PRODUCTIVITY_CALENDAR_SYNC_PROVIDER, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('productivity:calendarLocal', { requester: 'renderer-main-window' })
+    return await productivityService.syncExternalCalendar(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PRODUCTIVITY_BRIEFING_GENERATE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('productivity:briefing', { requester: 'renderer-main-window' })
+    return await productivityService.generateDailyBriefing(payload || {})
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PRODUCTIVITY_BRIEFING_GET_LATEST, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('productivity:briefing', { requester: 'renderer-main-window' })
+    return productivityService.getLatestDailyBriefing(payload?.profileId)
+  })
+
+  // Media Gallery, Asset Library, Collections & Secure Media Management (Phase 12 Step 36)
+  ipcMain.handle(IPC_CHANNELS.MEDIA_GET_OVERVIEW, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('media:read', { requester: 'renderer-main-window' })
+    return mediaLibraryService.getOverviewSnapshot(payload?.profileId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.MEDIA_SELECT_AND_IMPORT_DIALOG, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('media:import', { requester: 'renderer-main-window' })
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      return null
+    }
+    const res = await dialog.showOpenDialog(mainWindow, {
+      title: 'Import Media Assets into HELIOXEN Media Gallery',
+      properties: ['openFile', 'multiSelections'],
+      filters: [
+        {
+          name: 'Supported Media (Images, Video, Audio)',
+          extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'mp4', 'webm', 'mp3', 'wav', 'ogg']
+        }
+      ]
+    })
+    if (res.canceled || res.filePaths.length === 0) {
+      return null
+    }
+    return await mediaLibraryService.importBatch({
+      storageMode: payload?.storageMode ?? 'managed_copy',
+      items: res.filePaths.map((fp) => ({
+        filePath: fp,
+        collectionIds: payload?.collectionId ? [payload.collectionId] : undefined
+      }))
+    })
+  })
+
+  ipcMain.handle(IPC_CHANNELS.MEDIA_IMPORT_BATCH, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('media:import', { requester: 'renderer-main-window' })
+    return await mediaLibraryService.importBatch(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.MEDIA_SAVE_CAPTURE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('media:import', { requester: 'renderer-main-window' })
+    return await mediaLibraryService.saveCapturedMedia(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.MEDIA_LIST_ASSETS, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('media:read', { requester: 'renderer-main-window' })
+    return mediaLibraryService.listAssets(payload || {})
+  })
+
+  ipcMain.handle(IPC_CHANNELS.MEDIA_GET_ASSET, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('media:read', { requester: 'renderer-main-window' })
+    return mediaLibraryService.getAsset(payload?.id, payload?.profileId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.MEDIA_GET_PREVIEW, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('media:read', { requester: 'renderer-main-window' })
+    return await mediaLibraryService.getAssetPreview(payload?.id, payload?.profileId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.MEDIA_UPDATE_METADATA, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('media:organize', { requester: 'renderer-main-window' })
+    return mediaLibraryService.updateAssetMetadata(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.MEDIA_RELINK_EXTERNAL, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('media:import', { requester: 'renderer-main-window' })
+    return mediaLibraryService.relinkExternalAsset(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.MEDIA_CREATE_COLLECTION, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('media:organize', { requester: 'renderer-main-window' })
+    return mediaLibraryService.createCollection(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.MEDIA_LIST_COLLECTIONS, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('media:read', { requester: 'renderer-main-window' })
+    return mediaLibraryService.listCollections(payload?.profileId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.MEDIA_UPDATE_COLLECTION, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('media:organize', { requester: 'renderer-main-window' })
+    return mediaLibraryService.updateCollection(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.MEDIA_DELETE_COLLECTION, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('media:organize', { requester: 'renderer-main-window' })
+    return mediaLibraryService.deleteCollection(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.MEDIA_MODIFY_COLLECTION_MEMBERSHIP, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('media:organize', { requester: 'renderer-main-window' })
+    return mediaLibraryService.modifyCollectionMembership(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.MEDIA_REMOVE_FROM_LIBRARY, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('media:remove', { requester: 'renderer-main-window' })
+    return mediaLibraryService.removeAssetFromLibrary(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.MEDIA_DELETE_MANAGED_PERMANENTLY, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('media:deletePermanent', {
+      requester: 'renderer-main-window',
+      consentRequestId: payload?.confirmPermanentDelete
+        ? 'engine_approved_media_permanent_delete'
+        : undefined
+    })
+    return mediaLibraryService.deleteManagedAssetPermanently(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.MEDIA_BULK_OPERATION, async (event, payload) => {
+    assertValidSender(event)
+    if (payload?.operation === 'delete_managed_permanently') {
+      authorizer.authorize('media:deletePermanent', {
+        requester: 'renderer-main-window',
+        consentRequestId: payload?.confirmPermanentDelete
+          ? 'engine_approved_media_bulk_delete'
+          : undefined
+      })
+    } else if (payload?.operation === 'remove_from_library') {
+      authorizer.authorize('media:remove', { requester: 'renderer-main-window' })
+    } else {
+      authorizer.authorize('media:organize', { requester: 'renderer-main-window' })
+    }
+    return mediaLibraryService.executeBulkOperation(payload)
+  })
+
+  // Step 37: VisualHub, Mermaid Visualization, and AI Image Generation
+  ipcMain.handle(IPC_CHANNELS.VISUAL_GET_OVERVIEW, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('visual:mermaid', { requester: 'renderer-main-window' })
+    return await visualHubService.getOverviewSnapshot(payload?.profileId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.VISUAL_RENDER_MERMAID, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('visual:mermaid', { requester: 'renderer-main-window' })
+    return visualHubService.validateAndRenderMermaid(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.VISUAL_SAVE_DIAGRAM, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('visual:mermaid', { requester: 'renderer-main-window' })
+    return visualHubService.saveDiagramDocument(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.VISUAL_LIST_DIAGRAMS, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('visual:mermaid', { requester: 'renderer-main-window' })
+    return visualHubService.listDiagramDocuments(payload ?? {})
+  })
+
+  ipcMain.handle(IPC_CHANNELS.VISUAL_DELETE_DIAGRAM, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('visual:mermaid', { requester: 'renderer-main-window' })
+    return visualHubService.deleteDiagramDocument(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.VISUAL_EXPORT_DIAGRAM, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('visual:exportDiagram', { requester: 'renderer-main-window' })
+
+    let targetFilePath: string | undefined = payload?.targetFilePath
+    let overwriteExisting = Boolean(payload?.overwriteExisting)
+    if (payload?.promptSaveDialog && mainWindow && !mainWindow.isDestroyed()) {
+      const ext = payload.format === 'svg' ? 'svg' : payload.format === 'png' ? 'png' : 'mmd'
+      const defaultName = `${sanitizeSuggestedFileName(payload.suggestedFileName || 'diagram', 'diagram')}.${ext}`
+      const saveResult = await dialog.showSaveDialog(mainWindow, {
+        title: `Export Mermaid Diagram (.${ext})`,
+        defaultPath: defaultName,
+        filters: [
+          {
+            name: ext.toUpperCase(),
+            extensions: [ext]
+          }
+        ]
+      })
+      if (saveResult.canceled || !saveResult.filePath) {
+        return null
+      }
+      targetFilePath = saveResult.filePath
+      overwriteExisting = true
+    }
+
+    const { promptSaveDialog: _ignore, ...exportReq } = payload ?? {}
+    return visualHubService.exportDiagram({
+      ...exportReq,
+      targetFilePath,
+      overwriteExisting
+    })
+  })
+
+  ipcMain.handle(IPC_CHANNELS.VISUAL_SAVE_DIAGRAM_TO_GALLERY, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('visual:saveToGallery', { requester: 'renderer-main-window' })
+    return await visualHubService.saveDiagramPngToGallery(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.VISUAL_GET_IMAGE_MODELS, async (event) => {
+    assertValidSender(event)
+    authorizer.authorize('visual:mermaid', { requester: 'renderer-main-window' })
+    return await visualHubService.getEligibleImageModels()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.VISUAL_GENERATE_IMAGE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('visual:generateImage', { requester: 'renderer-main-window' })
+    return await visualHubService.generateImage(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.VISUAL_CANCEL_IMAGE_GENERATION, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('visual:generateImage', { requester: 'renderer-main-window' })
+    return visualHubService.cancelImageGeneration(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.VISUAL_SAVE_IMAGE_TO_GALLERY, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('visual:saveToGallery', { requester: 'renderer-main-window' })
+    return await visualHubService.saveGeneratedImageToGallery(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.VISUAL_DISCARD_IMAGE_CANDIDATE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('visual:generateImage', { requester: 'renderer-main-window' })
+    return visualHubService.discardGeneratedCandidate(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.VISUAL_UPDATE_PREFERENCES, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('visual:mermaid', { requester: 'renderer-main-window' })
+    const { profileId, ...prefs } = payload ?? {}
+    return visualHubService.updatePreferences(prefs, profileId)
+  })
+
+  // Step 38: World Monitor, Interactive Globe, Geographic Maps, and News Intelligence
+  ipcMain.handle(IPC_CHANNELS.WORLD_GET_OVERVIEW, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('world:read', { requester: 'renderer-main-window' })
+    return worldMonitorService.getOverviewSnapshot(payload?.profileId, payload?.filterQuery)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.WORLD_QUERY_FEED, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('world:read', { requester: 'renderer-main-window' })
+    return worldMonitorService.queryFeedAndMarkers(payload ?? {})
+  })
+
+  ipcMain.handle(IPC_CHANNELS.WORLD_REFRESH_FEED, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('world:refreshFeed', { requester: 'renderer-main-window' })
+    return await worldMonitorService.refreshNewsFeed(payload ?? {})
+  })
+
+  ipcMain.handle(IPC_CHANNELS.WORLD_SEARCH_LOCATIONS, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('world:read', { requester: 'renderer-main-window' })
+    return worldMonitorService.searchLocations(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.WORLD_TOGGLE_BOOKMARK, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('world:read', { requester: 'renderer-main-window' })
+    return worldMonitorService.toggleArticleBookmark(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.WORLD_OPEN_SOURCE_URL, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('world:openSource', { requester: 'renderer-main-window' })
+    return await worldMonitorService.openArticleSourceUrl(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.WORLD_UPDATE_PREFERENCES, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('world:read', { requester: 'renderer-main-window' })
+    const { profileId, ...prefs } = payload ?? {}
+    return worldMonitorService.updatePreferences(prefs, profileId)
+  })
+
+  // Step 39: System Health, Network Monitoring, and Weather Widgets
+  ipcMain.handle(IPC_CHANNELS.WIDGETS_GET_SYSTEM_HEALTH, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('widgets:readSystemHealth', { requester: 'renderer-main-window' })
+    return await systemHealthService.getSnapshot(payload?.sampleDurationMs ?? 100)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.WIDGETS_GET_NETWORK_STATUS, async (event) => {
+    assertValidSender(event)
+    authorizer.authorize('widgets:runNetworkDiagnostic', { requester: 'renderer-main-window' })
+    return networkMonitorService.getNetworkStatusSnapshot()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.WIDGETS_RUN_NETWORK_DIAGNOSTIC, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('widgets:runNetworkDiagnostic', { requester: 'renderer-main-window' })
+    return await networkMonitorService.runDiagnostic({
+      targetUrl: payload?.targetUrl,
+      timeoutMs: payload?.timeoutMs
+    })
+  })
+
+  ipcMain.handle(IPC_CHANNELS.WIDGETS_CANCEL_NETWORK_DIAGNOSTIC, async (event) => {
+    assertValidSender(event)
+    authorizer.authorize('widgets:runNetworkDiagnostic', { requester: 'renderer-main-window' })
+    return networkMonitorService.cancelDiagnostic()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.WIDGETS_SEARCH_WEATHER_LOCATIONS, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('widgets:readWeather', { requester: 'renderer-main-window' })
+    return await weatherService.searchLocations(payload?.query ?? '', payload?.limit ?? 8)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.WIDGETS_GET_WEATHER_FORECAST, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('widgets:readWeather', { requester: 'renderer-main-window' })
+    const prefs = widgetPreferencesManager.getPreferences()
+    return await weatherService.getForecast({
+      location: payload?.location ?? prefs.weather.selectedLocation,
+      temperatureUnit: payload?.temperatureUnit ?? prefs.weather.temperatureUnit,
+      windSpeedUnit: payload?.windSpeedUnit ?? prefs.weather.windSpeedUnit,
+      apiKey: prefs.weather.apiKey,
+      forceRefresh: payload?.forceRefresh ?? false
+    })
+  })
+
+  ipcMain.handle(IPC_CHANNELS.WIDGETS_GET_PREFERENCES, async (event) => {
+    assertValidSender(event)
+    authorizer.authorize('widgets:managePreferences', { requester: 'renderer-main-window' })
+    return widgetPreferencesManager.getPreferences()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.WIDGETS_UPDATE_PREFERENCES, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('widgets:managePreferences', { requester: 'renderer-main-window' })
+    const updated = widgetPreferencesManager.updatePreferences(payload)
+    if (payload?.networkMonitor?.selectedEndpointUrl) {
+      try {
+        networkMonitorService.setSelectedEndpoint(payload.networkMonitor.selectedEndpointUrl)
+      } catch {
+        // Ignore invalid endpoint
+      }
+    }
+    return updated
+  })
+
+  // Step 40: Agent Town, Plugin Connectors, and Dynamic Skills Framework
+  ipcMain.handle(IPC_CHANNELS.AGENTS_GET_OVERVIEW, async (event) => {
+    assertValidSender(event)
+    authorizer.authorize('agents:read', { requester: 'renderer-main-window' })
+    return agentTownService.getOverviewSnapshot()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.AGENTS_LIST, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('agents:read', { requester: 'renderer-main-window' })
+    return agentTownService.listAgents(payload?.category)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.AGENTS_SET_ENABLED, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('agents:manage', { requester: 'renderer-main-window' })
+    return agentTownService.setAgentEnabled(payload.id, payload.enabled)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PLUGINS_LIST, async (event) => {
+    assertValidSender(event)
+    authorizer.authorize('agents:read', { requester: 'renderer-main-window' })
+    return agentTownService.listPlugins()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.PLUGINS_SET_ENABLED, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('plugins:manage', { requester: 'renderer-main-window' })
+    return agentTownService.setPluginEnabled(payload.id, payload.enabled)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.CONNECTORS_CONNECT, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('plugins:manage', { requester: 'renderer-main-window' })
+    return agentTownService.connectConnector(payload.connectorId, payload?.credentialRef)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.CONNECTORS_DISCONNECT, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('plugins:manage', { requester: 'renderer-main-window' })
+    return agentTownService.disconnectConnector(payload.connectorId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.CONNECTORS_UPDATE_SCOPES, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('plugins:manage', { requester: 'renderer-main-window' })
+    return agentTownService.updateConnectorScopes(payload.connectorId, payload.grantedScopes)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SKILLS_LIST, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('agents:read', { requester: 'renderer-main-window' })
+    return agentTownService.listSkills(payload?.category)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SKILLS_GET, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('agents:read', { requester: 'renderer-main-window' })
+    return agentTownService.getSkill(payload.skillId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SKILLS_VALIDATE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('skills:author', { requester: 'renderer-main-window' })
+    return agentTownService.validateSkill(payload.definition)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SKILLS_DRY_RUN, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('skills:author', { requester: 'renderer-main-window' })
+    return agentTownService.dryRunSkill(payload.definition, payload?.testInputs)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SKILLS_SAVE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('skills:author', { requester: 'renderer-main-window' })
+    return agentTownService.saveSkill(payload.definition)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SKILLS_SET_STATUS, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('skills:author', { requester: 'renderer-main-window' })
+    return agentTownService.setSkillStatus(payload.skillId, payload.status)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SKILLS_DELETE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('skills:author', { requester: 'renderer-main-window' })
+    return agentTownService.deleteSkill(payload.skillId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SKILLS_EXECUTE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('skills:execute', { requester: 'renderer-main-window' })
+    return await agentTownService.executeSkill(payload.skillId, payload?.parameters)
+  })
+
+  // Step 41: Multi-Agent Collaboration, Delegation, and Coordinated Task Execution
+  ipcMain.handle(IPC_CHANNELS.AGENTS_COORDINATE_TASK, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('agents:coordinate', { requester: 'renderer-main-window' })
+    return await agentTownService.coordinateTask(payload.input)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.AGENTS_GET_COORDINATED_TASK, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('agents:read', { requester: 'renderer-main-window' })
+    return agentTownService.getCoordinatedTask(payload.parentTaskId) ?? null
+  })
+
+  ipcMain.handle(IPC_CHANNELS.AGENTS_LIST_COORDINATED_TASKS, async (event) => {
+    assertValidSender(event)
+    authorizer.authorize('agents:read', { requester: 'renderer-main-window' })
+    return agentTownService.listCoordinatedTasks()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.AGENTS_CANCEL_COORDINATED_TASK, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('agents:coordinate', { requester: 'renderer-main-window' })
+    return agentTownService.cancelCoordinatedTask(payload.parentTaskId, payload?.reason)
+  })
+
+  // Step 42: Advanced Dynamic Skill Studio, Validation, Testing, Versioning, and Safe Evolution
+  ipcMain.handle(IPC_CHANNELS.SKILLS_VALIDATE_STAGED, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('skills:author', { requester: 'renderer-main-window' })
+    return agentTownService.validateSkillStaged(payload.definitionOrId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SKILLS_CREATE_VERSION, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('skills:author', { requester: 'renderer-main-window' })
+    return agentTownService.createSkillVersion(payload.skillId, payload?.changelog)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SKILLS_LIST_VERSIONS, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('skills:author', { requester: 'renderer-main-window' })
+    return agentTownService.listSkillVersions(payload.skillId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SKILLS_GET_VERSION, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('skills:author', { requester: 'renderer-main-window' })
+    return agentTownService.getSkillVersion(payload.skillId, payload.versionId) ?? null
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SKILLS_COMPARE_VERSIONS, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('skills:author', { requester: 'renderer-main-window' })
+    return agentTownService.compareSkillVersions(payload.skillId, payload.baseVersionId, payload.targetVersionId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SKILLS_ROLLBACK_VERSION, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('skills:author', { requester: 'renderer-main-window' })
+    return agentTownService.rollbackSkillVersion(payload.skillId, payload.targetVersionId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SKILLS_CREATE_SCENARIO, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('skills:author', { requester: 'renderer-main-window' })
+    return agentTownService.createTestScenario(payload.skillId, payload.scenario)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SKILLS_LIST_SCENARIOS, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('skills:author', { requester: 'renderer-main-window' })
+    return agentTownService.listTestScenarios(payload.skillId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SKILLS_DELETE_SCENARIO, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('skills:author', { requester: 'renderer-main-window' })
+    return agentTownService.deleteTestScenario(payload.skillId, payload.scenarioId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SKILLS_RUN_SCENARIO, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('skills:author', { requester: 'renderer-main-window' })
+    return await agentTownService.runTestScenario(payload.skillId, payload.scenarioId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SKILLS_RUN_REGRESSION_TESTS, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('skills:author', { requester: 'renderer-main-window' })
+    return await agentTownService.runRegressionTests(payload.skillId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SKILLS_EXPORT_PACKAGE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('skills:author', { requester: 'renderer-main-window' })
+    return agentTownService.exportSkillPackage(payload.skillId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SKILLS_PREVIEW_IMPORT, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('skills:author', { requester: 'renderer-main-window' })
+    return agentTownService.previewSkillImport(payload.rawJson)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SKILLS_IMPORT_PACKAGE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('skills:author', { requester: 'renderer-main-window' })
+    return agentTownService.importSkillPackage(payload.rawJson, payload?.options)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SKILLS_GENERATE_AI_DRAFT, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('skills:author', { requester: 'renderer-main-window' })
+    return await agentTownService.generateSkillDraftWithAi(payload.prompt, payload?.category)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SKILLS_REFINE_AI_DRAFT, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('skills:author', { requester: 'renderer-main-window' })
+    return await agentTownService.refineSkillWithAi(payload.skillId, payload.instruction)
+  })
 }
 
 /**
@@ -1190,9 +2033,13 @@ function createWindow(): void {
 }
 
 app.whenReady().then(async () => {
+  setVisualHubProviderServiceGetter(() => getProviderService())
+  setAgentTownProviderServiceGetter(() => getProviderService())
   await getModelRegistry().initialize()
   await getPreferencesStorage().initialize()
   await getVoicePreferencesStorage().initialize()
+  await memoryService.initialize()
+  productivityService.reconcileStartupAndResume()
   registerWindowIpcHandlers()
   registerAiAndCredentialIpcHandlers()
   createWindow()
@@ -1313,4 +2160,131 @@ app.on('will-quit', () => {
   ipcMain.removeHandler(IPC_CHANNELS.BROWSER_LIST_DOWNLOADS)
   ipcMain.removeHandler(IPC_CHANNELS.BROWSER_APPROVE_DOWNLOAD)
   ipcMain.removeHandler(IPC_CHANNELS.BROWSER_CANCEL_DOWNLOAD)
+  ipcMain.removeHandler(IPC_CHANNELS.MEMORY_GET_STATE)
+  ipcMain.removeHandler(IPC_CHANNELS.MEMORY_SET_CONSENT)
+  ipcMain.removeHandler(IPC_CHANNELS.MEMORY_UPDATE_PROFILE)
+  ipcMain.removeHandler(IPC_CHANNELS.MEMORY_CREATE)
+  ipcMain.removeHandler(IPC_CHANNELS.MEMORY_LIST)
+  ipcMain.removeHandler(IPC_CHANNELS.MEMORY_GET)
+  ipcMain.removeHandler(IPC_CHANNELS.MEMORY_UPDATE)
+  ipcMain.removeHandler(IPC_CHANNELS.MEMORY_DELETE)
+  ipcMain.removeHandler(IPC_CHANNELS.MEMORY_CLEAR_ALL)
+  ipcMain.removeHandler(IPC_CHANNELS.MEMORY_RETRIEVE)
+  ipcMain.removeHandler(IPC_CHANNELS.MEMORY_PROPOSE_SUGGESTION)
+  ipcMain.removeHandler(IPC_CHANNELS.MEMORY_RESOLVE_SUGGESTION)
+  ipcMain.removeHandler(IPC_CHANNELS.PRODUCTIVITY_GET_OVERVIEW)
+  ipcMain.removeHandler(IPC_CHANNELS.PRODUCTIVITY_UPDATE_SETTINGS)
+  ipcMain.removeHandler(IPC_CHANNELS.PRODUCTIVITY_NOTE_CREATE)
+  ipcMain.removeHandler(IPC_CHANNELS.PRODUCTIVITY_NOTE_LIST)
+  ipcMain.removeHandler(IPC_CHANNELS.PRODUCTIVITY_NOTE_UPDATE)
+  ipcMain.removeHandler(IPC_CHANNELS.PRODUCTIVITY_NOTE_DELETE)
+  ipcMain.removeHandler(IPC_CHANNELS.PRODUCTIVITY_TASK_CREATE)
+  ipcMain.removeHandler(IPC_CHANNELS.PRODUCTIVITY_TASK_LIST)
+  ipcMain.removeHandler(IPC_CHANNELS.PRODUCTIVITY_TASK_UPDATE)
+  ipcMain.removeHandler(IPC_CHANNELS.PRODUCTIVITY_TASK_COMPLETE_BY_TITLE)
+  ipcMain.removeHandler(IPC_CHANNELS.PRODUCTIVITY_TASK_DELETE)
+  ipcMain.removeHandler(IPC_CHANNELS.PRODUCTIVITY_REMINDER_CREATE)
+  ipcMain.removeHandler(IPC_CHANNELS.PRODUCTIVITY_REMINDER_LIST)
+  ipcMain.removeHandler(IPC_CHANNELS.PRODUCTIVITY_REMINDER_UPDATE)
+  ipcMain.removeHandler(IPC_CHANNELS.PRODUCTIVITY_REMINDER_SNOOZE)
+  ipcMain.removeHandler(IPC_CHANNELS.PRODUCTIVITY_REMINDER_DISMISS)
+  ipcMain.removeHandler(IPC_CHANNELS.PRODUCTIVITY_REMINDER_CANCEL)
+  ipcMain.removeHandler(IPC_CHANNELS.PRODUCTIVITY_REMINDER_DELETE)
+  ipcMain.removeHandler(IPC_CHANNELS.PRODUCTIVITY_CALENDAR_CREATE_EVENT)
+  ipcMain.removeHandler(IPC_CHANNELS.PRODUCTIVITY_CALENDAR_LIST_EVENTS)
+  ipcMain.removeHandler(IPC_CHANNELS.PRODUCTIVITY_CALENDAR_UPDATE_EVENT)
+  ipcMain.removeHandler(IPC_CHANNELS.PRODUCTIVITY_CALENDAR_DELETE_EVENT)
+  ipcMain.removeHandler(IPC_CHANNELS.PRODUCTIVITY_CALENDAR_CONNECT_PROVIDER)
+  ipcMain.removeHandler(IPC_CHANNELS.PRODUCTIVITY_CALENDAR_DISCONNECT_PROVIDER)
+  ipcMain.removeHandler(IPC_CHANNELS.PRODUCTIVITY_CALENDAR_SYNC_PROVIDER)
+  ipcMain.removeHandler(IPC_CHANNELS.PRODUCTIVITY_BRIEFING_GENERATE)
+  ipcMain.removeHandler(IPC_CHANNELS.PRODUCTIVITY_BRIEFING_GET_LATEST)
+  ipcMain.removeHandler(IPC_CHANNELS.MEDIA_GET_OVERVIEW)
+  ipcMain.removeHandler(IPC_CHANNELS.MEDIA_SELECT_AND_IMPORT_DIALOG)
+  ipcMain.removeHandler(IPC_CHANNELS.MEDIA_IMPORT_BATCH)
+  ipcMain.removeHandler(IPC_CHANNELS.MEDIA_SAVE_CAPTURE)
+  ipcMain.removeHandler(IPC_CHANNELS.MEDIA_LIST_ASSETS)
+  ipcMain.removeHandler(IPC_CHANNELS.MEDIA_GET_ASSET)
+  ipcMain.removeHandler(IPC_CHANNELS.MEDIA_GET_PREVIEW)
+  ipcMain.removeHandler(IPC_CHANNELS.MEDIA_UPDATE_METADATA)
+  ipcMain.removeHandler(IPC_CHANNELS.MEDIA_RELINK_EXTERNAL)
+  ipcMain.removeHandler(IPC_CHANNELS.MEDIA_CREATE_COLLECTION)
+  ipcMain.removeHandler(IPC_CHANNELS.MEDIA_LIST_COLLECTIONS)
+  ipcMain.removeHandler(IPC_CHANNELS.MEDIA_UPDATE_COLLECTION)
+  ipcMain.removeHandler(IPC_CHANNELS.MEDIA_DELETE_COLLECTION)
+  ipcMain.removeHandler(IPC_CHANNELS.MEDIA_MODIFY_COLLECTION_MEMBERSHIP)
+  ipcMain.removeHandler(IPC_CHANNELS.MEDIA_REMOVE_FROM_LIBRARY)
+  ipcMain.removeHandler(IPC_CHANNELS.MEDIA_DELETE_MANAGED_PERMANENTLY)
+  ipcMain.removeHandler(IPC_CHANNELS.MEDIA_BULK_OPERATION)
+  ipcMain.removeHandler(IPC_CHANNELS.VISUAL_GET_OVERVIEW)
+  ipcMain.removeHandler(IPC_CHANNELS.VISUAL_RENDER_MERMAID)
+  ipcMain.removeHandler(IPC_CHANNELS.VISUAL_SAVE_DIAGRAM)
+  ipcMain.removeHandler(IPC_CHANNELS.VISUAL_LIST_DIAGRAMS)
+  ipcMain.removeHandler(IPC_CHANNELS.VISUAL_DELETE_DIAGRAM)
+  ipcMain.removeHandler(IPC_CHANNELS.VISUAL_EXPORT_DIAGRAM)
+  ipcMain.removeHandler(IPC_CHANNELS.VISUAL_SAVE_DIAGRAM_TO_GALLERY)
+  ipcMain.removeHandler(IPC_CHANNELS.VISUAL_GET_IMAGE_MODELS)
+  ipcMain.removeHandler(IPC_CHANNELS.VISUAL_GENERATE_IMAGE)
+  ipcMain.removeHandler(IPC_CHANNELS.VISUAL_CANCEL_IMAGE_GENERATION)
+  ipcMain.removeHandler(IPC_CHANNELS.VISUAL_SAVE_IMAGE_TO_GALLERY)
+  ipcMain.removeHandler(IPC_CHANNELS.VISUAL_DISCARD_IMAGE_CANDIDATE)
+  ipcMain.removeHandler(IPC_CHANNELS.VISUAL_UPDATE_PREFERENCES)
+  ipcMain.removeHandler(IPC_CHANNELS.WORLD_GET_OVERVIEW)
+  ipcMain.removeHandler(IPC_CHANNELS.WORLD_QUERY_FEED)
+  ipcMain.removeHandler(IPC_CHANNELS.WORLD_REFRESH_FEED)
+  ipcMain.removeHandler(IPC_CHANNELS.WORLD_SEARCH_LOCATIONS)
+  ipcMain.removeHandler(IPC_CHANNELS.WORLD_TOGGLE_BOOKMARK)
+  ipcMain.removeHandler(IPC_CHANNELS.WORLD_OPEN_SOURCE_URL)
+  ipcMain.removeHandler(IPC_CHANNELS.WORLD_UPDATE_PREFERENCES)
+  ipcMain.removeHandler(IPC_CHANNELS.WIDGETS_GET_SYSTEM_HEALTH)
+  ipcMain.removeHandler(IPC_CHANNELS.WIDGETS_GET_NETWORK_STATUS)
+  ipcMain.removeHandler(IPC_CHANNELS.WIDGETS_RUN_NETWORK_DIAGNOSTIC)
+  ipcMain.removeHandler(IPC_CHANNELS.WIDGETS_CANCEL_NETWORK_DIAGNOSTIC)
+  ipcMain.removeHandler(IPC_CHANNELS.WIDGETS_SEARCH_WEATHER_LOCATIONS)
+  ipcMain.removeHandler(IPC_CHANNELS.WIDGETS_GET_WEATHER_FORECAST)
+  ipcMain.removeHandler(IPC_CHANNELS.WIDGETS_GET_PREFERENCES)
+  ipcMain.removeHandler(IPC_CHANNELS.WIDGETS_UPDATE_PREFERENCES)
+  ipcMain.removeHandler(IPC_CHANNELS.AGENTS_GET_OVERVIEW)
+  ipcMain.removeHandler(IPC_CHANNELS.AGENTS_LIST)
+  ipcMain.removeHandler(IPC_CHANNELS.AGENTS_SET_ENABLED)
+  ipcMain.removeHandler(IPC_CHANNELS.PLUGINS_LIST)
+  ipcMain.removeHandler(IPC_CHANNELS.PLUGINS_SET_ENABLED)
+  ipcMain.removeHandler(IPC_CHANNELS.CONNECTORS_CONNECT)
+  ipcMain.removeHandler(IPC_CHANNELS.CONNECTORS_DISCONNECT)
+  ipcMain.removeHandler(IPC_CHANNELS.CONNECTORS_UPDATE_SCOPES)
+  ipcMain.removeHandler(IPC_CHANNELS.SKILLS_LIST)
+  ipcMain.removeHandler(IPC_CHANNELS.SKILLS_GET)
+  ipcMain.removeHandler(IPC_CHANNELS.SKILLS_VALIDATE)
+  ipcMain.removeHandler(IPC_CHANNELS.SKILLS_DRY_RUN)
+  ipcMain.removeHandler(IPC_CHANNELS.SKILLS_SAVE)
+  ipcMain.removeHandler(IPC_CHANNELS.SKILLS_SET_STATUS)
+  ipcMain.removeHandler(IPC_CHANNELS.SKILLS_DELETE)
+  ipcMain.removeHandler(IPC_CHANNELS.SKILLS_EXECUTE)
+  ipcMain.removeHandler(IPC_CHANNELS.AGENTS_COORDINATE_TASK)
+  ipcMain.removeHandler(IPC_CHANNELS.AGENTS_GET_COORDINATED_TASK)
+  ipcMain.removeHandler(IPC_CHANNELS.AGENTS_LIST_COORDINATED_TASKS)
+  ipcMain.removeHandler(IPC_CHANNELS.AGENTS_CANCEL_COORDINATED_TASK)
+  ipcMain.removeHandler(IPC_CHANNELS.SKILLS_VALIDATE_STAGED)
+  ipcMain.removeHandler(IPC_CHANNELS.SKILLS_CREATE_VERSION)
+  ipcMain.removeHandler(IPC_CHANNELS.SKILLS_LIST_VERSIONS)
+  ipcMain.removeHandler(IPC_CHANNELS.SKILLS_GET_VERSION)
+  ipcMain.removeHandler(IPC_CHANNELS.SKILLS_COMPARE_VERSIONS)
+  ipcMain.removeHandler(IPC_CHANNELS.SKILLS_ROLLBACK_VERSION)
+  ipcMain.removeHandler(IPC_CHANNELS.SKILLS_CREATE_SCENARIO)
+  ipcMain.removeHandler(IPC_CHANNELS.SKILLS_LIST_SCENARIOS)
+  ipcMain.removeHandler(IPC_CHANNELS.SKILLS_DELETE_SCENARIO)
+  ipcMain.removeHandler(IPC_CHANNELS.SKILLS_RUN_SCENARIO)
+  ipcMain.removeHandler(IPC_CHANNELS.SKILLS_RUN_REGRESSION_TESTS)
+  ipcMain.removeHandler(IPC_CHANNELS.SKILLS_EXPORT_PACKAGE)
+  ipcMain.removeHandler(IPC_CHANNELS.SKILLS_PREVIEW_IMPORT)
+  ipcMain.removeHandler(IPC_CHANNELS.SKILLS_IMPORT_PACKAGE)
+  ipcMain.removeHandler(IPC_CHANNELS.SKILLS_GENERATE_AI_DRAFT)
+  ipcMain.removeHandler(IPC_CHANNELS.SKILLS_REFINE_AI_DRAFT)
+  productivityService.dispose()
+  mediaLibraryService.dispose()
+  visualHubService.dispose()
+  worldMonitorService.dispose()
+  networkMonitorService.dispose()
+  weatherService.dispose()
+  agentTownService.dispose()
 })

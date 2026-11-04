@@ -11,6 +11,7 @@ export type ContextSourceType =
   | 'camera_capture'
   | 'screen_capture'
   | 'extracted_document'
+  | 'long_term_memory'
 
 export type ContextTrustLevel =
   | 'system'
@@ -80,12 +81,24 @@ export const DEFAULT_CONTEXT_LIMITS: ContextLimits = {
   maxImageSizeBytes: 4 * 1024 * 1024 // 4 MB
 }
 
+export interface AssembledMemoryContextItem {
+  id: string
+  category: string
+  content: string
+  sourceType: string
+  projectScope?: string
+}
+
 export interface ContextAssemblyRequest {
   conversationId: string
   activeTaskId?: string
   selectedModelId: string
   includeSystemInstructions?: boolean
   maxContextTokens?: number
+  /** Optional retrieved long-term memories (only attached when memoryEnabled is verified true) */
+  memoryItems?: AssembledMemoryContextItem[]
+  /** Optional formatted contextual memory block */
+  formattedMemoryBlock?: string
 }
 
 export interface AssembledMessage {
@@ -104,6 +117,10 @@ export interface AssembledPayload {
     text: string
     pageCount?: number
   }>
+  memoryContext?: {
+    items: AssembledMemoryContextItem[]
+    formattedBlock: string
+  }
 }
 
 export interface OmittedContextItem {

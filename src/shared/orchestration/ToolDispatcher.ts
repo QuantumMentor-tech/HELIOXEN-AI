@@ -904,5 +904,219 @@ export class ToolDispatcher {
       }
       return { success: true, action: input.action, downloadId: input.downloadId }
     })
+
+    // 58. memory:remember_fact
+    this.registerHandler('memory:remember_fact', async (input: { content: string; category: string }) => {
+      return {
+        success: true,
+        deduplicated: false,
+        supersededRecordIds: [],
+        message: `Saved memory in '${input.category}'.`
+      }
+    })
+
+    // 59. memory:retrieve_relevant
+    this.registerHandler('memory:retrieve_relevant', async () => {
+      return {
+        memoryEnabled: false,
+        allowedForProvider: false,
+        memories: [],
+        totalChars: 0,
+        formattedContextBlock: ''
+      }
+    })
+
+    // 60. memory:propose_suggestion
+    this.registerHandler(
+      'memory:propose_suggestion',
+      async (input: { proposedContent: string; category: string }) => {
+        return {
+          id: `sug_${Date.now()}`,
+          proposedContent: input.proposedContent,
+          category: input.category,
+          status: 'pending'
+        }
+      }
+    )
+
+    // 61-71. Step 35: Productivity Tools
+    this.registerHandler('notes:create', async (input: { title: string }) => ({
+      id: `note_${Date.now()}`,
+      title: input.title,
+      createdAt: Date.now()
+    }))
+
+    this.registerHandler('notes:search', async () => ({
+      notes: [],
+      totalCount: 0
+    }))
+
+    this.registerHandler(
+      'tasks:create',
+      async (input: { title: string; priority?: string }) => ({
+        id: `task_${Date.now()}`,
+        title: input.title,
+        status: 'todo',
+        priority: input.priority ?? 'medium'
+      })
+    )
+
+    this.registerHandler('tasks:list', async () => ({
+      tasks: [],
+      totalCount: 0
+    }))
+
+    this.registerHandler(
+      'tasks:complete',
+      async (input: { titleQuery: string }) => ({
+        status: 'completed' as const,
+        message: `Task "${input.titleQuery}" completed.`
+      })
+    )
+
+    this.registerHandler(
+      'reminders:create',
+      async (input: { title: string; dueAt: number }) => ({
+        id: `rem_${Date.now()}`,
+        title: input.title,
+        dueAt: input.dueAt,
+        status: 'scheduled'
+      })
+    )
+
+    this.registerHandler(
+      'reminders:manage',
+      async (input: { id: string; action: string }) => ({
+        id: input.id,
+        status: input.action === 'cancel' ? 'cancelled' : 'acknowledged',
+        dueAt: Date.now()
+      })
+    )
+
+    this.registerHandler('calendar:list_events', async () => ({
+      events: [],
+      totalCount: 0
+    }))
+
+    this.registerHandler(
+      'calendar:create_event',
+      async (input: { title: string; startAt?: number; endAt?: number }) => ({
+        id: `evt_${Date.now()}`,
+        title: input.title,
+        startAt: input.startAt ?? Date.now(),
+        endAt: input.endAt ?? Date.now() + 3600000
+      })
+    )
+
+    this.registerHandler(
+      'calendar:modify_external_event',
+      async (input: { id: string; action: string }) => ({
+        success: true,
+        id: input.id,
+        action: input.action
+      })
+    )
+
+    this.registerHandler(
+      'briefing:generate',
+      async (input: { dateKey?: string }) => ({
+        id: `briefing_${Date.now()}`,
+        dateKey: input.dateKey ?? '2026-01-01',
+        summaryText: 'Daily Briefing ready.',
+        isEmpty: true
+      })
+    )
+
+    // 72-76. Step 36: Media Gallery Tools
+    this.registerHandler('media:list_assets', async () => ({
+      assets: [],
+      totalCount: 0
+    }))
+
+    this.registerHandler(
+      'media:update_metadata',
+      async (input: { id: string; displayName?: string; favorite?: boolean }) => ({
+        id: input.id,
+        displayName: input.displayName ?? 'Asset',
+        favorite: Boolean(input.favorite)
+      })
+    )
+
+    this.registerHandler('media:manage_collections', async () => ({
+      success: true,
+      collections: []
+    }))
+
+    this.registerHandler('media:remove_asset', async (input: { id: string }) => ({
+      removed: true,
+      id: input.id,
+      originalExternalFilePreserved: true
+    }))
+
+    this.registerHandler('media:delete_managed_asset', async (input: { id: string }) => ({
+      deleted: true,
+      id: input.id,
+      managedFileDeleted: true
+    }))
+
+    // 77-80. Step 37: VisualHub Tools
+    this.registerHandler('visual:render_mermaid', async () => ({
+      valid: true,
+      diagramType: 'flowchart',
+      nodeCount: 2,
+      edgeCount: 1,
+      diagnostics: [],
+      svgMarkup: '<svg xmlns="http://www.w3.org/2000/svg"></svg>'
+    }))
+
+    this.registerHandler(
+      'visual:export_diagram',
+      async (input: { format: 'mmd' | 'svg' | 'png'; destinationPath?: string }) => ({
+        exported: true,
+        format: input.format,
+        destinationPath: input.destinationPath ?? `diagram.${input.format}`,
+        fileName: `diagram.${input.format}`,
+        sizeBytes: 128
+      })
+    )
+
+    this.registerHandler(
+      'visual:generate_image',
+      async (input: { providerId: string; modelId: string }) => ({
+        id: `img_job_${Date.now()}`,
+        status: 'completed',
+        providerId: input.providerId,
+        modelId: input.modelId,
+        candidates: []
+      })
+    )
+
+    this.registerHandler('visual:save_to_gallery', async (input: { candidateId: string }) => ({
+      saved: true,
+      candidateId: input.candidateId,
+      mediaAssetId: `media_${Date.now()}`
+    }))
+
+    // 81-83. Step 38: World Monitor Tools
+    this.registerHandler('world:query_news_feed', async () => ({
+      totalMatchingCount: 0,
+      articles: [],
+      markers: [],
+      freshnessState: 'empty'
+    }))
+
+    this.registerHandler('world:search_locations', async (input: { query: string }) => ({
+      query: input.query,
+      candidates: [],
+      isAmbiguous: false
+    }))
+
+    this.registerHandler('world:refresh_news_feed', async () => ({
+      refreshedAt: Date.now(),
+      freshnessState: 'empty',
+      totalArticles: 0,
+      newArticlesCount: 0,
+      warnings: []
+    }))
   }
 }

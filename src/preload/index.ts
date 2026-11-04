@@ -13,7 +13,14 @@ import {
   HelioxenVoiceApi,
   HelioxenCaptureApi,
   HelioxenDocumentsApi,
-  HelioxenResearchApi
+  HelioxenResearchApi,
+  HelioxenMemoryApi,
+  HelioxenProductivityApi,
+  HelioxenMediaLibraryApi,
+  HelioxenVisualHubApi,
+  HelioxenWorldMonitorApi,
+  HelioxenWidgetsApi,
+  HelioxenAgentsApi
 } from './types'
 import {
   ResearchSearchQuery,
@@ -26,6 +33,28 @@ import {
   ValidateCitationsRequest,
   ResearchCollection
 } from '../shared/research/types'
+import {
+  MemoryStateOverview,
+  MemoryConsentUpdateRequest,
+  UserProfile,
+  UserProfileUpdateRequest,
+  CreateMemoryRequest,
+  CreateMemoryResult,
+  ListMemoriesRequest,
+  MemoryRecord,
+  UpdateMemoryRequest,
+  UpdateMemoryResult,
+  DeleteMemoryRequest,
+  DeleteMemoryResult,
+  ClearMemoriesRequest,
+  ClearMemoriesResult,
+  MemoryRetrievalRequest,
+  MemoryRetrievalResult,
+  ProposeMemorySuggestionRequest,
+  MemorySuggestion,
+  ResolveMemorySuggestionRequest,
+  ResolveMemorySuggestionResult
+} from '../shared/memory/types'
 import { AudioPermissionStatus, AudioDeviceInfo } from '../shared/audio/types'
 import { UserVoicePreferences } from '../shared/voice/types'
 import { DesktopDisplaySource, CapturePermissionStatus } from '../shared/capture/types'
@@ -545,6 +574,273 @@ const researchApi: HelioxenResearchApi = Object.freeze({
   }
 })
 
+const memoryApi: HelioxenMemoryApi = Object.freeze({
+  getState: (profileId?: string): Promise<MemoryStateOverview> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.MEMORY_GET_STATE, { profileId })
+  },
+  setConsent: (request: MemoryConsentUpdateRequest): Promise<UserProfile> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.MEMORY_SET_CONSENT, request)
+  },
+  updateProfile: (request: UserProfileUpdateRequest): Promise<UserProfile> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.MEMORY_UPDATE_PROFILE, request)
+  },
+  create: (request: CreateMemoryRequest): Promise<CreateMemoryResult> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.MEMORY_CREATE, request)
+  },
+  list: (request?: ListMemoriesRequest): Promise<MemoryRecord[]> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.MEMORY_LIST, request)
+  },
+  get: (id: string, profileId?: string): Promise<MemoryRecord | null> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.MEMORY_GET, { id, profileId })
+  },
+  update: (request: UpdateMemoryRequest): Promise<UpdateMemoryResult> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.MEMORY_UPDATE, request)
+  },
+  delete: (request: DeleteMemoryRequest): Promise<DeleteMemoryResult> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.MEMORY_DELETE, request)
+  },
+  clearAll: (request: ClearMemoriesRequest): Promise<ClearMemoriesResult> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.MEMORY_CLEAR_ALL, request)
+  },
+  retrieve: (request: MemoryRetrievalRequest): Promise<MemoryRetrievalResult> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.MEMORY_RETRIEVE, request)
+  },
+  proposeSuggestion: (request: ProposeMemorySuggestionRequest): Promise<MemorySuggestion> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.MEMORY_PROPOSE_SUGGESTION, request)
+  },
+  resolveSuggestion: (request: ResolveMemorySuggestionRequest): Promise<ResolveMemorySuggestionResult> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.MEMORY_RESOLVE_SUGGESTION, request)
+  }
+})
+
+const productivityApi: HelioxenProductivityApi = Object.freeze<HelioxenProductivityApi>({
+  getOverview: (profileId?: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PRODUCTIVITY_GET_OVERVIEW, { profileId }),
+  updateSettings: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PRODUCTIVITY_UPDATE_SETTINGS, request),
+  createNote: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PRODUCTIVITY_NOTE_CREATE, request),
+  listNotes: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PRODUCTIVITY_NOTE_LIST, request),
+  updateNote: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PRODUCTIVITY_NOTE_UPDATE, request),
+  deleteNote: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PRODUCTIVITY_NOTE_DELETE, request),
+  createTask: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PRODUCTIVITY_TASK_CREATE, request),
+  listTasks: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PRODUCTIVITY_TASK_LIST, request),
+  updateTask: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PRODUCTIVITY_TASK_UPDATE, request),
+  completeTaskByTitle: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PRODUCTIVITY_TASK_COMPLETE_BY_TITLE, request),
+  deleteTask: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PRODUCTIVITY_TASK_DELETE, request),
+  createReminder: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PRODUCTIVITY_REMINDER_CREATE, request),
+  listReminders: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PRODUCTIVITY_REMINDER_LIST, request),
+  updateReminder: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PRODUCTIVITY_REMINDER_UPDATE, request),
+  snoozeReminder: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PRODUCTIVITY_REMINDER_SNOOZE, request),
+  dismissReminder: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PRODUCTIVITY_REMINDER_DISMISS, request),
+  cancelReminder: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PRODUCTIVITY_REMINDER_CANCEL, request),
+  deleteReminder: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PRODUCTIVITY_REMINDER_DELETE, request),
+  createCalendarEvent: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PRODUCTIVITY_CALENDAR_CREATE_EVENT, request),
+  listCalendarEvents: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PRODUCTIVITY_CALENDAR_LIST_EVENTS, request),
+  updateCalendarEvent: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PRODUCTIVITY_CALENDAR_UPDATE_EVENT, request),
+  deleteCalendarEvent: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PRODUCTIVITY_CALENDAR_DELETE_EVENT, request),
+  connectExternalCalendar: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PRODUCTIVITY_CALENDAR_CONNECT_PROVIDER, request),
+  disconnectExternalCalendar: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PRODUCTIVITY_CALENDAR_DISCONNECT_PROVIDER, request),
+  syncExternalCalendar: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PRODUCTIVITY_CALENDAR_SYNC_PROVIDER, request),
+  generateBriefing: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PRODUCTIVITY_BRIEFING_GENERATE, request),
+  getLatestBriefing: (profileId?: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PRODUCTIVITY_BRIEFING_GET_LATEST, { profileId })
+})
+
+const mediaLibraryApi: HelioxenMediaLibraryApi = Object.freeze<HelioxenMediaLibraryApi>({
+  getOverview: (profileId?: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.MEDIA_GET_OVERVIEW, { profileId }),
+  selectAndImportDialog: (options) =>
+    ipcRenderer.invoke(IPC_CHANNELS.MEDIA_SELECT_AND_IMPORT_DIALOG, options),
+  importBatch: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.MEDIA_IMPORT_BATCH, request),
+  saveCapture: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.MEDIA_SAVE_CAPTURE, request),
+  listAssets: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.MEDIA_LIST_ASSETS, request),
+  getAsset: (id: string, profileId?: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.MEDIA_GET_ASSET, { id, profileId }),
+  getPreview: (id: string, profileId?: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.MEDIA_GET_PREVIEW, { id, profileId }),
+  updateMetadata: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.MEDIA_UPDATE_METADATA, request),
+  relinkExternal: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.MEDIA_RELINK_EXTERNAL, request),
+  createCollection: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.MEDIA_CREATE_COLLECTION, request),
+  listCollections: (profileId?: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.MEDIA_LIST_COLLECTIONS, { profileId }),
+  updateCollection: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.MEDIA_UPDATE_COLLECTION, request),
+  deleteCollection: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.MEDIA_DELETE_COLLECTION, request),
+  modifyCollectionMembership: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.MEDIA_MODIFY_COLLECTION_MEMBERSHIP, request),
+  removeFromLibrary: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.MEDIA_REMOVE_FROM_LIBRARY, request),
+  deleteManagedPermanently: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.MEDIA_DELETE_MANAGED_PERMANENTLY, request),
+  bulkOperation: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.MEDIA_BULK_OPERATION, request)
+})
+
+const visualHubApi: HelioxenVisualHubApi = Object.freeze<HelioxenVisualHubApi>({
+  getOverview: (profileId?: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.VISUAL_GET_OVERVIEW, { profileId }),
+  renderMermaid: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.VISUAL_RENDER_MERMAID, request),
+  saveDiagram: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.VISUAL_SAVE_DIAGRAM, request),
+  listDiagrams: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.VISUAL_LIST_DIAGRAMS, request),
+  deleteDiagram: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.VISUAL_DELETE_DIAGRAM, request),
+  exportDiagram: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.VISUAL_EXPORT_DIAGRAM, request),
+  saveDiagramToGallery: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.VISUAL_SAVE_DIAGRAM_TO_GALLERY, request),
+  getImageModels: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.VISUAL_GET_IMAGE_MODELS),
+  generateImage: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.VISUAL_GENERATE_IMAGE, request),
+  cancelImageGeneration: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.VISUAL_CANCEL_IMAGE_GENERATION, request),
+  saveImageToGallery: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.VISUAL_SAVE_IMAGE_TO_GALLERY, request),
+  discardImageCandidate: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.VISUAL_DISCARD_IMAGE_CANDIDATE, request),
+  updatePreferences: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.VISUAL_UPDATE_PREFERENCES, request)
+})
+
+const worldMonitorApi: HelioxenWorldMonitorApi = Object.freeze<HelioxenWorldMonitorApi>({
+  getOverview: (profileId?: string, filterQuery?: unknown) =>
+    ipcRenderer.invoke(IPC_CHANNELS.WORLD_GET_OVERVIEW, { profileId, filterQuery }),
+  queryFeed: (filterQuery) =>
+    ipcRenderer.invoke(IPC_CHANNELS.WORLD_QUERY_FEED, filterQuery ?? {}),
+  refreshFeed: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.WORLD_REFRESH_FEED, request ?? {}),
+  searchLocations: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.WORLD_SEARCH_LOCATIONS, request),
+  toggleBookmark: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.WORLD_TOGGLE_BOOKMARK, request),
+  openSourceUrl: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.WORLD_OPEN_SOURCE_URL, request),
+  updatePreferences: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.WORLD_UPDATE_PREFERENCES, request)
+})
+
+const widgetsApi: HelioxenWidgetsApi = Object.freeze({
+  getSystemHealth: (sampleDurationMs?: number) =>
+    ipcRenderer.invoke(IPC_CHANNELS.WIDGETS_GET_SYSTEM_HEALTH, { sampleDurationMs }),
+  getNetworkStatus: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.WIDGETS_GET_NETWORK_STATUS),
+  runNetworkDiagnostic: (request?: { targetUrl?: string; timeoutMs?: number }) =>
+    ipcRenderer.invoke(IPC_CHANNELS.WIDGETS_RUN_NETWORK_DIAGNOSTIC, request ?? {}),
+  cancelNetworkDiagnostic: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.WIDGETS_CANCEL_NETWORK_DIAGNOSTIC),
+  searchWeatherLocations: (query: string, limit?: number) =>
+    ipcRenderer.invoke(IPC_CHANNELS.WIDGETS_SEARCH_WEATHER_LOCATIONS, { query, limit }),
+  getWeatherForecast: (request?: any) =>
+    ipcRenderer.invoke(IPC_CHANNELS.WIDGETS_GET_WEATHER_FORECAST, request ?? {}),
+  getPreferences: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.WIDGETS_GET_PREFERENCES),
+  updatePreferences: (patch: any) =>
+    ipcRenderer.invoke(IPC_CHANNELS.WIDGETS_UPDATE_PREFERENCES, patch)
+})
+
+const agentsApi: HelioxenAgentsApi = Object.freeze<HelioxenAgentsApi>({
+  getOverview: () => ipcRenderer.invoke(IPC_CHANNELS.AGENTS_GET_OVERVIEW),
+  listAgents: (category?: string) => ipcRenderer.invoke(IPC_CHANNELS.AGENTS_LIST, { category }),
+  setAgentEnabled: (id: string, enabled: boolean) =>
+    ipcRenderer.invoke(IPC_CHANNELS.AGENTS_SET_ENABLED, { id, enabled }),
+  listPlugins: () => ipcRenderer.invoke(IPC_CHANNELS.PLUGINS_LIST),
+  setPluginEnabled: (id: string, enabled: boolean) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PLUGINS_SET_ENABLED, { id, enabled }),
+  connectConnector: (connectorId: string, credentialRef?: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.CONNECTORS_CONNECT, { connectorId, credentialRef }),
+  disconnectConnector: (connectorId: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.CONNECTORS_DISCONNECT, { connectorId }),
+  updateConnectorScopes: (connectorId: string, grantedScopes: string[]) =>
+    ipcRenderer.invoke(IPC_CHANNELS.CONNECTORS_UPDATE_SCOPES, { connectorId, grantedScopes }),
+  listSkills: (category?: string) => ipcRenderer.invoke(IPC_CHANNELS.SKILLS_LIST, { category }),
+  getSkill: (skillId: string) => ipcRenderer.invoke(IPC_CHANNELS.SKILLS_GET, { skillId }),
+  validateSkill: (definition: any) => ipcRenderer.invoke(IPC_CHANNELS.SKILLS_VALIDATE, { definition }),
+  dryRunSkill: (definition: any, testInputs?: Record<string, unknown>) =>
+    ipcRenderer.invoke(IPC_CHANNELS.SKILLS_DRY_RUN, { definition, testInputs }),
+  saveSkill: (definition: any) => ipcRenderer.invoke(IPC_CHANNELS.SKILLS_SAVE, { definition }),
+  setSkillStatus: (skillId: string, status: any) =>
+    ipcRenderer.invoke(IPC_CHANNELS.SKILLS_SET_STATUS, { skillId, status }),
+  deleteSkill: (skillId: string) => ipcRenderer.invoke(IPC_CHANNELS.SKILLS_DELETE, { skillId }),
+  executeSkill: (skillId: string, parameters?: Record<string, unknown>) =>
+    ipcRenderer.invoke(IPC_CHANNELS.SKILLS_EXECUTE, { skillId, parameters }),
+  coordinateTask: (input: any) =>
+    ipcRenderer.invoke(IPC_CHANNELS.AGENTS_COORDINATE_TASK, { input }),
+  getCoordinatedTask: (parentTaskId: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.AGENTS_GET_COORDINATED_TASK, { parentTaskId }),
+  listCoordinatedTasks: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.AGENTS_LIST_COORDINATED_TASKS),
+  cancelCoordinatedTask: (parentTaskId: string, reason?: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.AGENTS_CANCEL_COORDINATED_TASK, { parentTaskId, reason }),
+
+  // Step 42: Advanced Dynamic Skill Studio
+  validateSkillStaged: (definitionOrId: unknown) =>
+    ipcRenderer.invoke(IPC_CHANNELS.SKILLS_VALIDATE_STAGED, { definitionOrId }),
+  createSkillVersion: (skillId: string, changelog?: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.SKILLS_CREATE_VERSION, { skillId, changelog }),
+  listSkillVersions: (skillId: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.SKILLS_LIST_VERSIONS, { skillId }),
+  getSkillVersion: (skillId: string, versionId: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.SKILLS_GET_VERSION, { skillId, versionId }),
+  compareSkillVersions: (skillId: string, baseVersionId: string, targetVersionId: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.SKILLS_COMPARE_VERSIONS, { skillId, baseVersionId, targetVersionId }),
+  rollbackSkillVersion: (skillId: string, targetVersionId: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.SKILLS_ROLLBACK_VERSION, { skillId, targetVersionId }),
+  createTestScenario: (skillId: string, scenario: any) =>
+    ipcRenderer.invoke(IPC_CHANNELS.SKILLS_CREATE_SCENARIO, { skillId, scenario }),
+  listTestScenarios: (skillId: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.SKILLS_LIST_SCENARIOS, { skillId }),
+  deleteTestScenario: (skillId: string, scenarioId: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.SKILLS_DELETE_SCENARIO, { skillId, scenarioId }),
+  runTestScenario: (skillId: string, scenarioId: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.SKILLS_RUN_SCENARIO, { skillId, scenarioId }),
+  runRegressionTests: (skillId: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.SKILLS_RUN_REGRESSION_TESTS, { skillId }),
+  exportSkillPackage: (skillId: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.SKILLS_EXPORT_PACKAGE, { skillId }),
+  previewSkillImport: (rawJson: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.SKILLS_PREVIEW_IMPORT, { rawJson }),
+  importSkillPackage: (rawJson: string, options?: any) =>
+    ipcRenderer.invoke(IPC_CHANNELS.SKILLS_IMPORT_PACKAGE, { rawJson, options }),
+  generateSkillDraftWithAi: (prompt: string, category?: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.SKILLS_GENERATE_AI_DRAFT, { prompt, category }),
+  refineSkillWithAi: (skillId: string, instruction: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.SKILLS_REFINE_AI_DRAFT, { skillId, instruction })
+})
+
 const helioxenApi: HelioxenApi = Object.freeze({
   platform: process.platform,
   environment: process.env.NODE_ENV || 'development',
@@ -567,7 +863,14 @@ const helioxenApi: HelioxenApi = Object.freeze({
   clipboard: clipboardApi,
   desktop: desktopApi,
   browser: browserApi,
-  research: researchApi
+  research: researchApi,
+  memory: memoryApi,
+  productivity: productivityApi,
+  media: mediaLibraryApi,
+  visual: visualHubApi,
+  world: worldMonitorApi,
+  widgets: widgetsApi,
+  agents: agentsApi
 })
 
 try {

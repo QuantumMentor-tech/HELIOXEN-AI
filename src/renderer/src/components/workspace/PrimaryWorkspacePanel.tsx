@@ -27,6 +27,13 @@ import { AiCoreState } from '../core/types'
 import { ConversationPanel } from '../conversation/ConversationPanel'
 import { ConversationMessage } from '../conversation/types'
 import { ProviderSettingsPanel } from '../settings/ProviderSettingsPanel'
+import { MemoryVaultPanel } from '../memory/MemoryVaultPanel'
+import { ProductivityWorkspacePanel } from '../productivity/ProductivityWorkspacePanel'
+import { MediaGalleryPanel } from '../media/MediaGalleryPanel'
+import { VisualHubPanel } from '../visual/VisualHubPanel'
+import { WorldMonitorPanel } from '../world/WorldMonitorPanel'
+import { SystemWidgetsPanel } from '../widgets/SystemWidgetsPanel'
+import { AgentTownPanel } from '../agents/AgentTownPanel'
 import helioxenLogo from '../../assets/brand/helioxen-orbital-logo.png'
 
 import { CapturedStillImage } from '../../../../shared/capture'
@@ -99,7 +106,7 @@ export const PrimaryWorkspacePanel: React.FC<PrimaryWorkspacePanelProps> = ({
           actions={
             <div className="flex items-center space-x-2">
               <Badge variant="info" size="sm">
-                Step 33 of 48
+                Step 42 of 48
               </Badge>
               <IconButton
                 icon={
@@ -305,6 +312,33 @@ export const PrimaryWorkspacePanel: React.FC<PrimaryWorkspacePanelProps> = ({
                 onClearMessages={onClearMessages}
               />
             </div>
+          </div>
+        ) : currentDestination === 'memory' ? (
+          /* Personal Context, Integrated Productivity & Media Gallery Hub (Phase 12, Steps 34–36) */
+          <div className="flex-1 overflow-y-auto px-4 py-2 space-y-6">
+            <MediaGalleryPanel />
+            <ProductivityWorkspacePanel />
+            <MemoryVaultPanel />
+          </div>
+        ) : currentDestination === 'visual' ? (
+          /* VisualHub, Mermaid Visualization, and AI Image Generation (Phase 13, Step 37) */
+          <div className="flex-1 overflow-y-auto px-4 py-2">
+            <VisualHubPanel onNavigate={onNavigate} />
+          </div>
+        ) : currentDestination === 'monitor' ? (
+          /* World Monitor, Interactive Globe, Geographic Maps & News Intelligence (Phase 13, Step 38) */
+          <div className="flex-1 overflow-y-auto px-4 py-2">
+            <WorldMonitorPanel />
+          </div>
+        ) : currentDestination === 'widgets' ? (
+          /* System Health, Network Diagnostics & Weather Intelligence (Phase 13, Step 39) */
+          <div className="flex-1 overflow-y-auto px-4 py-2">
+            <SystemWidgetsPanel />
+          </div>
+        ) : currentDestination === 'skills' ? (
+          /* Agent Town, Plugin Connectors, Dynamic Skills, and Multi-Agent Collaboration (Phase 14, Steps 40-41) */
+          <div className="flex-1 overflow-y-auto px-4 py-2">
+            <AgentTownPanel />
           </div>
         ) : currentDestination === 'settings' ? (
           /* Provider & Model Registry Settings View (Phase 6, Step 17) */

@@ -5,7 +5,9 @@ import {
   AiStreamChunk,
   ProviderCredentialStatus,
   ProviderTestResult,
-  AiProviderAdapter
+  AiProviderAdapter,
+  AiProviderImageGenerationRequest,
+  AiProviderImageGenerationResponse
 } from '../../shared/ai/types'
 import { ProviderDefinition, DEFAULT_AI_PREFERENCES } from '../../shared/ai/models'
 import { ProviderHealthRecord } from '../../shared/ai/routing'
@@ -452,6 +454,66 @@ export class ProviderService {
         latencyMs: Date.now() - startTime,
         errorMessage: message
       }
+    }
+  }
+
+  /**
+   * Executes an explicit user-authorized image generation request through the approved provider adapter.
+   * Enforces capability checks, DPAPI credential retrieval, and health tracking.
+   */
+  public async generateImage(
+    request: AiProviderImageGenerationRequest,
+    signal?: AbortSignal
+  ): Promise<AiProviderImageGenerationResponse> {
+    authorizer.authorize('ai:providerInvoke', { requester: 'main-only' })
+
+    const adapter = this.getAdapter(request.provider)
+    if (typeof adapter.generateImage !== 'function') {
+      throw new AiProviderException({
+        code: 'PROVIDER_ERROR',
+        provider: request.provider,
+        message: `Provider adapter '${request.provider}' does not support image generation.`
+      })
+    }
+
+    const isHealthy = this.modelRouter.getHealthService().isProviderAvailable(request.provider)
+    if (!isHealthy) {
+      throw new AiProviderException({
+        code: 'PROVIDER_ERROR',
+        provider: request.provider,
+        message: `Provider '${request.provider}' is currently unhealthy or rate-limited.`
+      })
+    }
+
+    const apiKey = await this.getApiKey(request.provider)
+
+    securityLogger.logEvent('AUTHORIZATION_CHECK', 'ai-service', 'PERMITTED', {
+      capabilityId: 'ai:providerInvoke',
+      provider: request.provider,
+      model: request.model
+    })
+
+    try {
+      const response = await adapter.generateImage(request, apiKey, signal)
+      this.modelRouter.getHealthService().recordSuccess(request.provider)
+      return response
+    } catch (err: unknown) {
+      if (signal?.aborted) {
+        throw new AiProviderException({
+          code: 'CANCELLED',
+          provider: request.provider,
+          message: 'Image generation cancelled by user'
+        })
+      }
+      const errorCode = err instanceof AiProviderException ? err.code : 'PROVIDER_ERROR'
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      this.modelRouter.getHealthService().recordFailure(request.provider, errorCode, errorMessage)
+      if (err instanceof AiProviderException) throw err
+      throw new AiProviderException({
+        code: errorCode,
+        provider: request.provider,
+        message: errorMessage
+      })
     }
   }
 }

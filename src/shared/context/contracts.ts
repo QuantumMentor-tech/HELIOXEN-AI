@@ -22,7 +22,8 @@ export const ContextSourceTypeSchema = z.enum([
   'image_attachment',
   'camera_capture',
   'screen_capture',
-  'extracted_document'
+  'extracted_document',
+  'long_term_memory'
 ])
 
 export const ContextTrustLevelSchema = z.enum([

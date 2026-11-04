@@ -216,6 +216,20 @@ export interface HelioxenApi {
   readonly browser: HelioxenBrowserApi
   /** Web research, extraction, screenshots, and source citations (Phase 11 Step 32) */
   readonly research: HelioxenResearchApi
+  /** User profile, long-term memory, and consent-based personalization (Phase 12 Step 34) */
+  readonly memory: HelioxenMemoryApi
+  /** Integrated Notes, Tasks, Reminders, Calendar, and Daily Briefings (Phase 12 Step 35) */
+  readonly productivity: HelioxenProductivityApi
+  /** Media Gallery, Asset Library, Collections, and Secure Media Management (Phase 12 Step 36) */
+  readonly media: HelioxenMediaLibraryApi
+  /** VisualHub, Mermaid Visualization, and AI Image Generation (Phase 13 Step 37) */
+  readonly visual: HelioxenVisualHubApi
+  /** World Monitor, Interactive Globe, Geographic Maps, and News Intelligence (Phase 13 Step 38) */
+  readonly world: HelioxenWorldMonitorApi
+  /** System Health, Network Monitoring, and Weather Widgets (Phase 13 Step 39) */
+  readonly widgets: HelioxenWidgetsApi
+  /** Agent Town, Plugin Connectors, and Dynamic Skills (Phase 14 Step 40) */
+  readonly agents: HelioxenAgentsApi
 }
 
 import {
@@ -468,4 +482,354 @@ export interface HelioxenResearchApi {
   updateSourceInclusion: (conversationId: string, sourceId: string, included: boolean) => Promise<ResearchSourceRecord>
   clearCollection: (conversationId: string) => Promise<{ success: boolean; message: string }>
   validateCitations: (request: ValidateCitationsRequest) => Promise<ResearchCitation[]>
+}
+
+import {
+  MemoryStateOverview,
+  MemoryConsentUpdateRequest,
+  UserProfile,
+  UserProfileUpdateRequest,
+  CreateMemoryRequest,
+  CreateMemoryResult,
+  ListMemoriesRequest,
+  MemoryRecord,
+  UpdateMemoryRequest,
+  UpdateMemoryResult,
+  DeleteMemoryRequest,
+  DeleteMemoryResult,
+  ClearMemoriesRequest,
+  ClearMemoriesResult,
+  MemoryRetrievalRequest,
+  MemoryRetrievalResult,
+  ProposeMemorySuggestionRequest,
+  MemorySuggestion,
+  ResolveMemorySuggestionRequest,
+  ResolveMemorySuggestionResult
+} from '../shared/memory/types'
+
+export interface HelioxenMemoryApi {
+  getState: (profileId?: string) => Promise<MemoryStateOverview>
+  setConsent: (request: MemoryConsentUpdateRequest) => Promise<UserProfile>
+  updateProfile: (request: UserProfileUpdateRequest) => Promise<UserProfile>
+  create: (request: CreateMemoryRequest) => Promise<CreateMemoryResult>
+  list: (request?: ListMemoriesRequest) => Promise<MemoryRecord[]>
+  get: (id: string, profileId?: string) => Promise<MemoryRecord | null>
+  update: (request: UpdateMemoryRequest) => Promise<UpdateMemoryResult>
+  delete: (request: DeleteMemoryRequest) => Promise<DeleteMemoryResult>
+  clearAll: (request: ClearMemoriesRequest) => Promise<ClearMemoriesResult>
+  retrieve: (request: MemoryRetrievalRequest) => Promise<MemoryRetrievalResult>
+  proposeSuggestion: (request: ProposeMemorySuggestionRequest) => Promise<MemorySuggestion>
+  resolveSuggestion: (request: ResolveMemorySuggestionRequest) => Promise<ResolveMemorySuggestionResult>
+}
+
+import {
+  ProductivityOverviewSnapshot,
+  UpdateProductivitySettingsRequest,
+  ProductivityNotificationPreferences,
+  DailyBriefingPreferences,
+  CreateNoteRequest,
+  NoteRecord,
+  ListNotesRequest,
+  UpdateNoteRequest,
+  DeleteNoteRequest,
+  CreateTaskRequest,
+  TaskItemWithComputedState,
+  ListTasksRequest,
+  UpdateTaskRequest,
+  CompleteTaskByTitleRequest,
+  CompleteTaskByTitleResponse,
+  DeleteTaskRequest,
+  CreateReminderRequest,
+  ReminderRecord,
+  ListRemindersRequest,
+  UpdateReminderRequest,
+  SnoozeReminderRequest,
+  DismissReminderRequest,
+  CancelReminderRequest,
+  DeleteReminderRequest,
+  CreateCalendarEventRequest,
+  CalendarEventRecord,
+  ListCalendarEventsRequest,
+  UpdateCalendarEventRequest,
+  DeleteCalendarEventRequest,
+  ConnectExternalCalendarRequest,
+  ExternalCalendarAccountState,
+  DisconnectExternalCalendarRequest,
+  SyncExternalCalendarRequest,
+  SyncExternalCalendarResult,
+  GenerateDailyBriefingRequest,
+  DailyBriefingReport
+} from '../shared/productivity'
+
+export interface HelioxenProductivityApi {
+  getOverview: (profileId?: string) => Promise<ProductivityOverviewSnapshot>
+  updateSettings: (
+    request: UpdateProductivitySettingsRequest
+  ) => Promise<{ notifications: ProductivityNotificationPreferences; dailyBriefing: DailyBriefingPreferences }>
+  createNote: (request: CreateNoteRequest) => Promise<NoteRecord>
+  listNotes: (request?: ListNotesRequest) => Promise<NoteRecord[]>
+  updateNote: (request: UpdateNoteRequest) => Promise<NoteRecord>
+  deleteNote: (request: DeleteNoteRequest) => Promise<{ deleted: boolean; id: string }>
+  createTask: (request: CreateTaskRequest) => Promise<TaskItemWithComputedState>
+  listTasks: (request?: ListTasksRequest) => Promise<TaskItemWithComputedState[]>
+  updateTask: (request: UpdateTaskRequest) => Promise<TaskItemWithComputedState>
+  completeTaskByTitle: (request: CompleteTaskByTitleRequest) => Promise<CompleteTaskByTitleResponse>
+  deleteTask: (request: DeleteTaskRequest) => Promise<{ deleted: boolean; id: string }>
+  createReminder: (request: CreateReminderRequest) => Promise<ReminderRecord>
+  listReminders: (request?: ListRemindersRequest) => Promise<ReminderRecord[]>
+  updateReminder: (request: UpdateReminderRequest) => Promise<ReminderRecord>
+  snoozeReminder: (request: SnoozeReminderRequest) => Promise<ReminderRecord>
+  dismissReminder: (request: DismissReminderRequest) => Promise<ReminderRecord>
+  cancelReminder: (request: CancelReminderRequest) => Promise<ReminderRecord>
+  deleteReminder: (request: DeleteReminderRequest) => Promise<{ deleted: boolean; id: string }>
+  createCalendarEvent: (request: CreateCalendarEventRequest) => Promise<CalendarEventRecord>
+  listCalendarEvents: (request?: ListCalendarEventsRequest) => Promise<CalendarEventRecord[]>
+  updateCalendarEvent: (request: UpdateCalendarEventRequest) => Promise<CalendarEventRecord>
+  deleteCalendarEvent: (
+    request: DeleteCalendarEventRequest
+  ) => Promise<{ deleted: boolean; deletedIds: string[]; scope: string }>
+  connectExternalCalendar: (request: ConnectExternalCalendarRequest) => Promise<ExternalCalendarAccountState>
+  disconnectExternalCalendar: (request: DisconnectExternalCalendarRequest) => Promise<ExternalCalendarAccountState>
+  syncExternalCalendar: (request: SyncExternalCalendarRequest) => Promise<SyncExternalCalendarResult>
+  generateBriefing: (request?: GenerateDailyBriefingRequest) => Promise<DailyBriefingReport>
+  getLatestBriefing: (profileId?: string) => Promise<DailyBriefingReport | null>
+}
+
+import {
+  MediaLibraryOverviewSnapshot,
+  ImportMediaBatchRequest,
+  ImportMediaBatchResult,
+  SaveCapturedMediaRequest,
+  MediaAssetRecord,
+  ListMediaAssetsRequest,
+  ListMediaAssetsResult,
+  MediaAssetPreviewDescriptor,
+  UpdateMediaAssetMetadataRequest,
+  RelinkExternalMediaAssetRequest,
+  CreateMediaCollectionRequest,
+  MediaCollectionRecord,
+  UpdateMediaCollectionRequest,
+  DeleteMediaCollectionRequest,
+  ModifyCollectionMembershipRequest,
+  RemoveMediaAssetFromLibraryRequest,
+  RemoveMediaAssetResult,
+  DeleteManagedMediaAssetPermanentlyRequest,
+  DeleteManagedMediaAssetResult,
+  BulkMediaAssetOperationRequest,
+  BulkMediaAssetOperationResult,
+  MediaStorageMode
+} from '../shared/media'
+
+export interface HelioxenMediaLibraryApi {
+  getOverview: (profileId?: string) => Promise<MediaLibraryOverviewSnapshot>
+  selectAndImportDialog: (options?: {
+    storageMode?: MediaStorageMode
+    collectionId?: string
+  }) => Promise<ImportMediaBatchResult | null>
+  importBatch: (request: ImportMediaBatchRequest) => Promise<ImportMediaBatchResult>
+  saveCapture: (request: SaveCapturedMediaRequest) => Promise<MediaAssetRecord>
+  listAssets: (request?: ListMediaAssetsRequest) => Promise<ListMediaAssetsResult>
+  getAsset: (id: string, profileId?: string) => Promise<MediaAssetRecord | null>
+  getPreview: (id: string, profileId?: string) => Promise<MediaAssetPreviewDescriptor>
+  updateMetadata: (request: UpdateMediaAssetMetadataRequest) => Promise<MediaAssetRecord>
+  relinkExternal: (request: RelinkExternalMediaAssetRequest) => Promise<MediaAssetRecord>
+  createCollection: (request: CreateMediaCollectionRequest) => Promise<MediaCollectionRecord>
+  listCollections: (profileId?: string) => Promise<MediaCollectionRecord[]>
+  updateCollection: (request: UpdateMediaCollectionRequest) => Promise<MediaCollectionRecord>
+  deleteCollection: (request: DeleteMediaCollectionRequest) => Promise<{ deleted: boolean; id: string }>
+  modifyCollectionMembership: (
+    request: ModifyCollectionMembershipRequest
+  ) => Promise<MediaCollectionRecord>
+  removeFromLibrary: (request: RemoveMediaAssetFromLibraryRequest) => Promise<RemoveMediaAssetResult>
+  deleteManagedPermanently: (
+    request: DeleteManagedMediaAssetPermanentlyRequest
+  ) => Promise<DeleteManagedMediaAssetResult>
+  bulkOperation: (request: BulkMediaAssetOperationRequest) => Promise<BulkMediaAssetOperationResult>
+}
+
+import {
+  VisualHubOverviewSnapshot,
+  MermaidRenderResult,
+  SaveDiagramDocumentRequest,
+  DiagramDocumentRecord,
+  ListDiagramDocumentsRequest,
+  DeleteDiagramDocumentRequest,
+  ExportDiagramRequest,
+  ExportDiagramResult,
+  ImageModelCapabilityDescriptor,
+  ImageGenerationRequest,
+  ImageGenerationJobRecord,
+  CancelImageGenerationRequest,
+  CancelImageGenerationResult,
+  SaveGeneratedImageToGalleryRequest,
+  SaveGeneratedImageToGalleryResult,
+  DiscardGeneratedImageRequest,
+  VisualHubPreferences
+} from '../shared/visual'
+
+export interface HelioxenVisualHubApi {
+  getOverview: (profileId?: string) => Promise<VisualHubOverviewSnapshot>
+  renderMermaid: (request: { source: string }) => Promise<MermaidRenderResult>
+  saveDiagram: (request: SaveDiagramDocumentRequest) => Promise<DiagramDocumentRecord>
+  listDiagrams: (request?: ListDiagramDocumentsRequest) => Promise<DiagramDocumentRecord[]>
+  deleteDiagram: (request: DeleteDiagramDocumentRequest) => Promise<{ deleted: boolean; id: string }>
+  exportDiagram: (
+    request: ExportDiagramRequest & { promptSaveDialog?: boolean }
+  ) => Promise<ExportDiagramResult | null>
+  saveDiagramToGallery: (request: {
+    profileId?: string
+    source: string
+    displayName: string
+    tags?: readonly string[]
+    favorite?: boolean
+  }) => Promise<MediaAssetRecord>
+  getImageModels: () => Promise<ImageModelCapabilityDescriptor[]>
+  generateImage: (request: ImageGenerationRequest) => Promise<ImageGenerationJobRecord>
+  cancelImageGeneration: (
+    request: CancelImageGenerationRequest
+  ) => Promise<CancelImageGenerationResult>
+  saveImageToGallery: (
+    request: SaveGeneratedImageToGalleryRequest
+  ) => Promise<SaveGeneratedImageToGalleryResult>
+  discardImageCandidate: (
+    request: DiscardGeneratedImageRequest
+  ) => Promise<{ discarded: boolean; candidateId: string; preservedSavedAssetId: string | null }>
+  updatePreferences: (
+    request: Partial<VisualHubPreferences> & { profileId?: string }
+  ) => Promise<VisualHubPreferences>
+}
+
+import {
+  WorldMonitorOverviewSnapshot,
+  WorldMonitorFilterQuery,
+  WorldMonitorQueryResult,
+  WorldMonitorRefreshResult,
+  LocationSearchResult,
+  NormalizedNewsArticle,
+  WorldMonitorPreferences
+} from '../shared/world'
+
+export interface HelioxenWorldMonitorApi {
+  getOverview: (
+    profileId?: string,
+    filterQuery?: WorldMonitorFilterQuery
+  ) => Promise<WorldMonitorOverviewSnapshot>
+  queryFeed: (filterQuery?: WorldMonitorFilterQuery) => Promise<WorldMonitorQueryResult>
+  refreshFeed: (request?: {
+    profileId?: string
+    sourceIds?: string[]
+    searchQuery?: string
+    forceRefresh?: boolean
+  }) => Promise<WorldMonitorRefreshResult>
+  searchLocations: (request: {
+    query: string
+    limit?: number
+  }) => Promise<LocationSearchResult>
+  toggleBookmark: (request: {
+    profileId?: string
+    articleId: string
+    bookmarked: boolean
+  }) => Promise<NormalizedNewsArticle>
+  openSourceUrl: (request: {
+    articleId?: string
+    url: string
+  }) => Promise<{ opened: boolean; canonicalUrl: string }>
+  updatePreferences: (
+    request: Partial<WorldMonitorPreferences> & { profileId?: string }
+  ) => Promise<WorldMonitorPreferences>
+}
+
+import {
+  SystemHealthSnapshot,
+  NetworkStatusSnapshot,
+  NetworkDiagnosticResult,
+  WeatherLocation,
+  WeatherForecastSnapshot,
+  WidgetPreferences,
+  TemperatureUnit,
+  WindSpeedUnit
+} from '../shared/widgets'
+
+export interface HelioxenWidgetsApi {
+  getSystemHealth: (sampleDurationMs?: number) => Promise<SystemHealthSnapshot>
+  getNetworkStatus: () => Promise<NetworkStatusSnapshot>
+  runNetworkDiagnostic: (request?: {
+    targetUrl?: string
+    timeoutMs?: number
+  }) => Promise<NetworkDiagnosticResult>
+  cancelNetworkDiagnostic: () => Promise<boolean>
+  searchWeatherLocations: (query: string, limit?: number) => Promise<WeatherLocation[]>
+  getWeatherForecast: (request?: {
+    location?: WeatherLocation
+    temperatureUnit?: TemperatureUnit
+    windSpeedUnit?: WindSpeedUnit
+    forceRefresh?: boolean
+  }) => Promise<WeatherForecastSnapshot>
+  getPreferences: () => Promise<WidgetPreferences>
+  updatePreferences: (patch: any) => Promise<WidgetPreferences>
+}
+
+import {
+  AgentDefinition,
+  AgentTownOverviewSnapshot,
+  ConnectorDescriptor,
+  DynamicSkillDefinition,
+  PluginManifest,
+  SkillDryRunResult,
+  SkillExecutionResult,
+  SkillValidationResult,
+  DynamicSkillCreateInput
+} from '../shared/agents/types'
+import {
+  CollaborationPlanInput,
+  CoordinatedParentTask
+} from '../shared/agents/collaborationTypes'
+import {
+  SkillExportPackage,
+  SkillImportPreview,
+  SkillRegressionTestReport,
+  SkillScenarioTestResult,
+  SkillTestScenario,
+  SkillValidationReport,
+  SkillVersionDiff,
+  SkillVersionRecord
+} from '../shared/agents/skillStudioTypes'
+
+export interface HelioxenAgentsApi {
+  getOverview: () => Promise<AgentTownOverviewSnapshot>
+  listAgents: (category?: string) => Promise<AgentDefinition[]>
+  setAgentEnabled: (id: string, enabled: boolean) => Promise<AgentDefinition>
+  listPlugins: () => Promise<PluginManifest[]>
+  setPluginEnabled: (id: string, enabled: boolean) => Promise<PluginManifest>
+  connectConnector: (connectorId: string, credentialRef?: string) => Promise<ConnectorDescriptor>
+  disconnectConnector: (connectorId: string) => Promise<ConnectorDescriptor>
+  updateConnectorScopes: (connectorId: string, grantedScopes: string[]) => Promise<ConnectorDescriptor>
+  listSkills: (category?: string) => Promise<DynamicSkillDefinition[]>
+  getSkill: (skillId: string) => Promise<DynamicSkillDefinition | null>
+  validateSkill: (definition: DynamicSkillCreateInput) => Promise<SkillValidationResult>
+  dryRunSkill: (definition: DynamicSkillCreateInput, testInputs?: Record<string, unknown>) => Promise<SkillDryRunResult>
+  saveSkill: (definition: DynamicSkillCreateInput) => Promise<DynamicSkillDefinition>
+  setSkillStatus: (skillId: string, status: 'draft' | 'validated' | 'enabled' | 'disabled' | 'archived') => Promise<DynamicSkillDefinition>
+  deleteSkill: (skillId: string) => Promise<boolean>
+  executeSkill: (skillId: string, parameters?: Record<string, unknown>) => Promise<SkillExecutionResult>
+  coordinateTask: (input: CollaborationPlanInput) => Promise<CoordinatedParentTask>
+  getCoordinatedTask: (parentTaskId: string) => Promise<CoordinatedParentTask | null>
+  listCoordinatedTasks: () => Promise<CoordinatedParentTask[]>
+  cancelCoordinatedTask: (parentTaskId: string, reason?: string) => Promise<boolean>
+  validateSkillStaged: (definitionOrId: unknown) => Promise<SkillValidationReport>
+  createSkillVersion: (skillId: string, changelog?: string) => Promise<SkillVersionRecord>
+  listSkillVersions: (skillId: string) => Promise<SkillVersionRecord[]>
+  getSkillVersion: (skillId: string, versionId: string) => Promise<SkillVersionRecord | null>
+  compareSkillVersions: (skillId: string, baseVersionId: string, targetVersionId: string) => Promise<SkillVersionDiff>
+  rollbackSkillVersion: (skillId: string, targetVersionId: string) => Promise<DynamicSkillDefinition>
+  createTestScenario: (skillId: string, scenario: Omit<SkillTestScenario, 'createdAt' | 'updatedAt'>) => Promise<SkillTestScenario>
+  listTestScenarios: (skillId: string) => Promise<SkillTestScenario[]>
+  deleteTestScenario: (skillId: string, scenarioId: string) => Promise<boolean>
+  runTestScenario: (skillId: string, scenarioId: string) => Promise<SkillScenarioTestResult>
+  runRegressionTests: (skillId: string) => Promise<SkillRegressionTestReport>
+  exportSkillPackage: (skillId: string) => Promise<string>
+  previewSkillImport: (rawJson: string) => Promise<SkillImportPreview>
+  importSkillPackage: (rawJson: string, options?: { newId?: string; author?: string }) => Promise<DynamicSkillDefinition>
+  generateSkillDraftWithAi: (prompt: string, category?: string) => Promise<DynamicSkillDefinition>
+  refineSkillWithAi: (skillId: string, instruction: string) => Promise<DynamicSkillDefinition>
 }

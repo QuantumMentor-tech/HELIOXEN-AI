@@ -754,6 +754,319 @@ export const CAPABILITIES: Record<string, CapabilityDefinition> = {
     status: 'active'
   },
 
+  // --- Step 34: User Profile, Long-Term Memory & Consent-Based Personalization ---
+  'memory:read': {
+    id: 'memory:read',
+    name: 'Read User Profile & Long-Term Memory',
+    description: 'Reads user profile preferences, consent settings, and stored long-term memories.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'memory:write': {
+    id: 'memory:write',
+    name: 'Create & Update Long-Term Memory',
+    description: 'Creates, edits, or proposes user-approved long-term memories and personalization preferences.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'memory:delete': {
+    id: 'memory:delete',
+    name: 'Delete Individual Memory Record',
+    description: 'Permanently removes an individual stored memory record and invalidates retrieval caches.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'memory:clearAll': {
+    id: 'memory:clearAll',
+    name: 'Clear All Stored Memories',
+    description: 'Destructively clears all stored memories for a profile under explicit human confirmation.',
+    riskTier: 'high',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: true,
+    status: 'active'
+  },
+  'memory:manageConsent': {
+    id: 'memory:manageConsent',
+    name: 'Manage Long-Term Memory Consent',
+    description: 'Enables, disables, or updates user consent settings for persistent memory and cloud disclosure.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+
+  // --- Step 35: Integrated Productivity System (Notes, Tasks, Reminders, Calendar, Daily Briefings) ---
+  'productivity:notes': {
+    id: 'productivity:notes',
+    name: 'Manage Productivity Notes',
+    description: 'Creates, searches, updates, pins, archives, and deletes user notes.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'productivity:tasks': {
+    id: 'productivity:tasks',
+    name: 'Manage Productivity Tasks',
+    description: 'Creates, lists, updates, completes, and deletes user task items.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'productivity:reminders': {
+    id: 'productivity:reminders',
+    name: 'Schedule & Manage Reminders',
+    description: 'Schedules, snoozes, dismisses, and cancels local and recurring reminders.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'productivity:calendarLocal': {
+    id: 'productivity:calendarLocal',
+    name: 'Manage Local Calendar Events',
+    description: 'Reads, creates, updates, and deletes local calendar events.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'productivity:calendarExternalWrite': {
+    id: 'productivity:calendarExternalWrite',
+    name: 'Modify External Connected Calendar',
+    description: 'Creates, modifies, or deletes events on an external connected calendar provider under explicit human confirmation.',
+    riskTier: 'high',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: true,
+    status: 'active'
+  },
+  'productivity:briefing': {
+    id: 'productivity:briefing',
+    name: 'Generate & View Daily Briefings',
+    description: 'Assembles grounded daily briefings from notes, tasks, reminders, and calendar events.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+
+  // --- Step 36: Media Gallery and Media Asset Management ---
+  'media:read': {
+    id: 'media:read',
+    name: 'Browse & Preview Media Assets',
+    description: 'Lists, searches, and previews authorized media assets and collections in the Media Gallery.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'media:import': {
+    id: 'media:import',
+    name: 'Import Media Assets',
+    description: 'Validates and imports user-selected image, video, and audio files or approved captures into the Media Gallery.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'media:organize': {
+    id: 'media:organize',
+    name: 'Organize Media Metadata, Tags & Collections',
+    description: 'Updates asset display names, tags, favorites, and collection memberships.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'media:remove': {
+    id: 'media:remove',
+    name: 'Remove Media Entry from Library',
+    description: 'Removes a media entry from the gallery while preserving any external user source file.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'media:deletePermanent': {
+    id: 'media:deletePermanent',
+    name: 'Permanently Delete Managed Media Asset',
+    description: 'Permanently deletes an application-managed media copy and its thumbnail under explicit human confirmation.',
+    riskTier: 'high',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: true,
+    status: 'active'
+  },
+
+  // --- Step 37: VisualHub, Mermaid Visualization, and AI Image Generation ---
+  'visual:mermaid': {
+    id: 'visual:mermaid',
+    name: 'Validate, Render & Manage Mermaid Diagrams',
+    description: 'Validates, renders, and persists Mermaid diagrams inside VisualHub with strict SVG security controls.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'visual:exportDiagram': {
+    id: 'visual:exportDiagram',
+    name: 'Export Mermaid Diagram (.mmd, .svg, .png)',
+    description: 'Exports a validated Mermaid diagram to an approved destination path or Media Gallery.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'visual:generateImage': {
+    id: 'visual:generateImage',
+    name: 'Generate AI Image via Approved Provider',
+    description: 'Submits an explicit user-confirmed image generation prompt to a verified AI provider adapter.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'visual:saveToGallery': {
+    id: 'visual:saveToGallery',
+    name: 'Save Generated Visual Asset to Media Gallery',
+    description: 'Persists a user-approved generated image or exported diagram into the Step 36 Media Gallery with provenance metadata.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+
+  // --- Step 38: World Monitor, Interactive Globe, Geographic Maps, and News Intelligence ---
+  'world:read': {
+    id: 'world:read',
+    name: 'Browse World Monitor Globe, Map & News Feed',
+    description: 'Queries cached news records, geographic markers, story clusters, and gazetteer locations in World Monitor.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'world:refreshFeed': {
+    id: 'world:refreshFeed',
+    name: 'Refresh Authorized News Intelligence Feeds',
+    description: 'Fetches bounded metadata updates from approved public news and science feeds while respecting rate limits.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'world:openSource': {
+    id: 'world:openSource',
+    name: 'Open Validated Original News Source Link',
+    description: 'Opens an explicitly validated HTTPS/HTTP original article link in the default system browser.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+
+  // --- Step 39: System Health, Network Monitoring, and Weather Widgets ---
+  'widgets:readSystemHealth': {
+    id: 'widgets:readSystemHealth',
+    name: 'Read Local System Health Metrics',
+    description: 'Allows reading local OS memory, CPU, battery, and process health telemetry.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'widgets:runNetworkDiagnostic': {
+    id: 'widgets:runNetworkDiagnostic',
+    name: 'Run Bounded Network Diagnostics',
+    description: 'Allows executing a user-initiated bounded HTTPS test to an approved diagnostic endpoint.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'widgets:readWeather': {
+    id: 'widgets:readWeather',
+    name: 'Read Weather Forecast & Locations',
+    description: 'Allows searching weather locations and retrieving normalized forecast data from authorized providers.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'widgets:managePreferences': {
+    id: 'widgets:managePreferences',
+    name: 'Manage Widget Preferences',
+    description: 'Allows reading and updating local widget display preferences and settings.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+
+  // --- Step 40: Agent Town, Plugin Connectors, and Dynamic Skills ---
+  'agents:read': {
+    id: 'agents:read',
+    name: 'Read Agent Town Overview & Agents',
+    description: 'Allows querying registered agents, plugin status, and skills catalog.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'agents:manage': {
+    id: 'agents:manage',
+    name: 'Manage Agent Configuration',
+    description: 'Allows enabling or disabling registered agents and updating agent preferences.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'plugins:manage': {
+    id: 'plugins:manage',
+    name: 'Manage Plugin Connectors',
+    description: 'Allows toggling plugin activation, connecting/disconnecting external connectors, and managing scopes.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'skills:author': {
+    id: 'skills:author',
+    name: 'Author Dynamic Skills',
+    description: 'Allows creating, editing, validating, dry-running, and managing declarative dynamic skills.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'skills:execute': {
+    id: 'skills:execute',
+    name: 'Execute Dynamic Skills',
+    description: 'Allows executing composed declarative skills through the authoritative task execution engine.',
+    riskTier: 'high',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+
+  // --- Step 41: Multi-Agent Collaboration, Delegation, and Coordinated Task Execution ---
+  'agents:coordinate': {
+    id: 'agents:coordinate',
+    name: 'Coordinate Multi-Agent Collaboration',
+    description: 'Allows dispatching, inspecting, and cancelling coordinated multi-agent delegation plans and tasks.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+
   // --- Permanently Prohibited Capabilities ---
   'shell:execute': {
     id: 'shell:execute',

@@ -78,6 +78,38 @@ export interface ProviderTestResult {
   errorMessage?: string
 }
 
+export interface AiProviderImageGenerationRequest {
+  provider: AiProviderId
+  model: string
+  prompt: string
+  aspectRatio?: '1:1' | '16:9' | '9:16' | '4:3' | '3:4' | '3:2' | '2:3'
+  resolution?: '1K' | '2K' | '4K' | '1024x1024' | '1536x1024' | '1024x1536'
+  quality?: 'auto' | 'low' | 'medium' | 'high'
+  outputFormat?: 'image/png' | 'image/jpeg' | 'image/webp'
+  background?: 'auto' | 'opaque' | 'transparent'
+  numberOfImages?: number
+  referenceImages?: ReadonlyArray<{
+    readonly mimeType: string
+    readonly base64Data: string
+  }>
+}
+
+export interface AiProviderGeneratedImageItem {
+  readonly mimeType: 'image/png' | 'image/jpeg' | 'image/webp'
+  readonly base64Data: string
+  readonly width?: number
+  readonly height?: number
+  readonly revisedPrompt?: string
+}
+
+export interface AiProviderImageGenerationResponse {
+  readonly id: string
+  readonly provider: AiProviderId
+  readonly model: string
+  readonly images: readonly AiProviderGeneratedImageItem[]
+  readonly timestamp: number
+}
+
 export interface AiProviderAdapter {
   readonly providerId: AiProviderId
   readonly defaultModel: string
@@ -92,4 +124,9 @@ export interface AiProviderAdapter {
     onChunk: (chunk: AiStreamChunk) => void,
     signal?: AbortSignal
   ): Promise<AiGenerationResponse>
+  generateImage?(
+    request: AiProviderImageGenerationRequest,
+    apiKey: string,
+    signal?: AbortSignal
+  ): Promise<AiProviderImageGenerationResponse>
 }

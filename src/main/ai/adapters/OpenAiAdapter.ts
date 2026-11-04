@@ -4,13 +4,20 @@ import {
   AiGenerationRequest,
   AiGenerationResponse,
   AiStreamChunk,
-  AiMessage
+  AiMessage,
+  AiProviderImageGenerationRequest,
+  AiProviderImageGenerationResponse
 } from '../../../shared/ai/types'
 import { AiProviderException } from '../errors'
 
 const APPROVED_OPENAI_MODELS = new Set([
   'gpt-4o',
   'gpt-4o-mini'
+])
+
+const APPROVED_OPENAI_IMAGE_MODELS = new Set([
+  'gpt-image-2.5-sunburst',
+  'gpt-image-2.5-flare'
 ])
 
 export class OpenAiAdapter implements AiProviderAdapter {
@@ -202,6 +209,96 @@ export class OpenAiAdapter implements AiProviderAdapter {
         model,
         text: fullText,
         finishReason: 'stop',
+        timestamp: Date.now()
+      }
+    } catch (err: unknown) {
+      if (err instanceof AiProviderException) throw err
+      throw this.normalizeError(err)
+    }
+  }
+
+  public async generateImage(
+    request: AiProviderImageGenerationRequest,
+    apiKey: string,
+    signal?: AbortSignal
+  ): Promise<AiProviderImageGenerationResponse> {
+    if (signal?.aborted) {
+      throw new AiProviderException({
+        code: 'CANCELLED',
+        provider: this.providerId,
+        message: 'Image generation cancelled before dispatch'
+      })
+    }
+
+    if (!APPROVED_OPENAI_IMAGE_MODELS.has(request.model)) {
+      throw new AiProviderException({
+        code: 'INVALID_MODEL',
+        provider: this.providerId,
+        message: `Model '${request.model}' is not an approved OpenAI image generation model.`
+      })
+    }
+
+    const client = this.getClient(apiKey)
+    const outputFormat: 'png' | 'jpeg' | 'webp' =
+      request.outputFormat === 'image/jpeg'
+        ? 'jpeg'
+        : request.outputFormat === 'image/webp'
+          ? 'webp'
+          : 'png'
+
+    const size: '1024x1024' | '1536x1024' | '1024x1536' =
+      request.resolution === '1536x1024' || request.aspectRatio === '3:2' || request.aspectRatio === '16:9'
+        ? '1536x1024'
+        : request.resolution === '1024x1536' || request.aspectRatio === '2:3' || request.aspectRatio === '9:16'
+          ? '1024x1536'
+          : '1024x1024'
+
+    try {
+      const res = await client.images.generate(
+        {
+          model: request.model,
+          prompt: request.prompt,
+          n: request.numberOfImages ?? 1,
+          size,
+          quality: request.quality ?? 'auto',
+          output_format: outputFormat,
+          background: request.background ?? 'auto'
+        },
+        { signal }
+      )
+
+      if (signal?.aborted) {
+        throw new AiProviderException({
+          code: 'CANCELLED',
+          provider: this.providerId,
+          message: 'Image generation cancelled during execution'
+        })
+      }
+
+      const items = (res.data ?? [])
+        .filter((img) => Boolean(img.b64_json))
+        .map((img) => ({
+          mimeType: (request.outputFormat ?? 'image/png') as
+            | 'image/png'
+            | 'image/jpeg'
+            | 'image/webp',
+          base64Data: img.b64_json!,
+          revisedPrompt: img.revised_prompt
+        }))
+
+      if (items.length === 0) {
+        throw new AiProviderException({
+          code: 'PROVIDER_ERROR',
+          provider: this.providerId,
+          message: 'OpenAI image generation returned no image data.'
+        })
+      }
+
+      return {
+        id: `openai-img-${res.created || Date.now()}`,
+        provider: this.providerId,
+        model: request.model,
+        images: items,
         timestamp: Date.now()
       }
     } catch (err: unknown) {

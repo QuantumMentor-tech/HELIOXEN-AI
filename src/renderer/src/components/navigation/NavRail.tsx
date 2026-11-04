@@ -3,9 +3,11 @@ import {
   Cpu,
   MessageSquare,
   Database,
+  Sparkles,
   Boxes,
   Bot,
   Globe,
+  Activity,
   Settings,
   PanelLeftClose,
   PanelLeftOpen
@@ -27,9 +29,11 @@ const iconMap: Record<NavDestinationId, React.ReactNode> = {
   core: <Cpu className="w-5 h-5" />,
   conversations: <MessageSquare className="w-5 h-5" />,
   memory: <Database className="w-5 h-5" />,
+  visual: <Sparkles className="w-5 h-5" />,
   skills: <Boxes className="w-5 h-5" />,
   character: <Bot className="w-5 h-5" />,
   monitor: <Globe className="w-5 h-5" />,
+  widgets: <Activity className="w-5 h-5" />,
   settings: <Settings className="w-5 h-5" />
 }
 

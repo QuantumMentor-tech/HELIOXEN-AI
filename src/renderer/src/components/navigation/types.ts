@@ -2,9 +2,11 @@ export type NavDestinationId =
   | 'core'
   | 'conversations'
   | 'memory'
+  | 'visual'
   | 'skills'
   | 'character'
   | 'monitor'
+  | 'widgets'
   | 'settings'
 
 export type NavItemStatus = 'active' | 'roadmap' | 'disabled'
@@ -35,15 +37,22 @@ export const NAV_DESTINATIONS: NavItem[] = [
   {
     id: 'memory',
     label: 'Memory Vault',
-    description: 'Persistent Semantic Knowledge & Fact Store',
-    status: 'roadmap',
+    description: 'User Profile, Long-Term Memory & Consent-Based Personalization',
+    status: 'active',
+    section: 'primary'
+  },
+  {
+    id: 'visual',
+    label: 'VisualHub',
+    description: 'Mermaid Diagram Studio & Capability-Aware AI Image Generation',
+    status: 'active',
     section: 'primary'
   },
   {
     id: 'skills',
-    label: 'Skills & Tools',
-    description: 'Installed Tools, Dynamic Skills & Manifests',
-    status: 'roadmap',
+    label: 'Agent Town',
+    description: 'Agent Town, Plugin Connectors & Dynamic Skills Studio',
+    status: 'active',
     section: 'primary'
   },
   {
@@ -55,9 +64,16 @@ export const NAV_DESTINATIONS: NavItem[] = [
   },
   {
     id: 'monitor',
-    label: 'Monitor',
-    description: '3D World Globe & System Performance Telemetry',
-    status: 'roadmap',
+    label: 'World Monitor',
+    description: 'Interactive 3D Globe, Geographic Maps & Source-Attributed News Intelligence',
+    status: 'active',
+    section: 'primary'
+  },
+  {
+    id: 'widgets',
+    label: 'System & Widgets',
+    description: 'System Health, Bounded Network Diagnostics & Weather Intelligence',
+    status: 'active',
     section: 'primary'
   },
   {
