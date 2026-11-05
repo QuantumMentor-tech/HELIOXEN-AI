@@ -280,7 +280,70 @@ export const IPC_CHANNELS = {
   SKILLS_PREVIEW_IMPORT: 'skills:previewImport',
   SKILLS_IMPORT_PACKAGE: 'skills:importPackage',
   SKILLS_GENERATE_AI_DRAFT: 'skills:generateAiDraft',
-  SKILLS_REFINE_AI_DRAFT: 'skills:refineAiDraft'
+  SKILLS_REFINE_AI_DRAFT: 'skills:refineAiDraft',
+
+  // Step 43: Office Document Studio, Spreadsheets, Presentations, and AI Productivity
+  OFFICE_LIST_DOCUMENTS: 'office:listDocuments',
+  OFFICE_GET_DOCUMENT: 'office:getDocument',
+  OFFICE_SAVE_DOCUMENT: 'office:saveDocument',
+  OFFICE_DELETE_DOCUMENT: 'office:deleteDocument',
+  OFFICE_LIST_TEMPLATES: 'office:listTemplates',
+  OFFICE_CREATE_FROM_TEMPLATE: 'office:createFromTemplate',
+  OFFICE_EXPORT_DOCUMENT: 'office:exportDocument',
+  OFFICE_IMPORT_DOCUMENT: 'office:importDocument',
+  OFFICE_GENERATE_AI_DRAFT: 'office:generateAiDraft',
+  OFFICE_REWRITE_TEXT_AI: 'office:rewriteTextAi',
+  OFFICE_SUGGEST_FORMULA_AI: 'office:suggestFormulaAi',
+
+  // Step 44: Communication & Media Integrations
+  INTEGRATIONS_LIST: 'integrations:list',
+  INTEGRATIONS_GET: 'integrations:get',
+  INTEGRATIONS_CONNECT: 'integrations:connect',
+  INTEGRATIONS_DISCONNECT: 'integrations:disconnect',
+  INTEGRATIONS_HEALTH_CHECK: 'integrations:healthCheck',
+
+  COMMUNICATION_LIST_MESSAGES: 'communication:listMessages',
+  COMMUNICATION_GET_MESSAGE: 'communication:getMessage',
+  COMMUNICATION_SEARCH_MESSAGES: 'communication:searchMessages',
+  COMMUNICATION_CREATE_DRAFT: 'communication:createDraft',
+  COMMUNICATION_GET_DRAFT: 'communication:getDraft',
+  COMMUNICATION_UPDATE_DRAFT: 'communication:updateDraft',
+  COMMUNICATION_DELETE_DRAFT: 'communication:deleteDraft',
+  COMMUNICATION_LIST_DRAFTS: 'communication:listDrafts',
+  COMMUNICATION_REQUEST_SEND_CONFIRMATION: 'communication:requestSendConfirmation',
+  COMMUNICATION_CONFIRM_AND_SEND: 'communication:confirmAndSend',
+  COMMUNICATION_GENERATE_AI_DRAFT: 'communication:generateAiDraft',
+
+  MEDIA_INTEGRATION_SEARCH: 'mediaIntegration:search',
+  MEDIA_INTEGRATION_GET_PLAYBACK_STATE: 'mediaIntegration:getPlaybackState',
+  MEDIA_INTEGRATION_CONTROL_PLAYBACK: 'mediaIntegration:controlPlayback',
+  MEDIA_INTEGRATION_LIST_DEVICES: 'mediaIntegration:listDevices',
+  MEDIA_INTEGRATION_LIST_PLAYLISTS: 'mediaIntegration:listPlaylists',
+
+  // Step 45: Optional Android and Smart-Home Integrations
+  DEVICES_LIST_ANDROID: 'devices:listAndroid',
+  DEVICES_GET_ANDROID_STATUS: 'devices:getAndroidStatus',
+  DEVICES_PAIR_ANDROID: 'devices:pairAndroid',
+  DEVICES_DISCONNECT_ANDROID: 'devices:disconnectAndroid',
+  DEVICES_EXECUTE_ANDROID_ACTION: 'devices:executeAndroidAction',
+
+  SMART_HOME_GET_HUB_STATUS: 'smartHome:getHubStatus',
+  SMART_HOME_CONNECT_HUB: 'smartHome:connectHub',
+  SMART_HOME_DISCONNECT_HUB: 'smartHome:disconnectHub',
+  SMART_HOME_LIST_ENTITIES: 'smartHome:listEntities',
+  SMART_HOME_GET_ENTITY_STATE: 'smartHome:getEntityState',
+  SMART_HOME_REQUEST_SECURITY_CONFIRMATION: 'smartHome:requestSecurityConfirmation',
+  SMART_HOME_EXECUTE_ACTION: 'smartHome:executeAction',
+
+  // Step 46: Crash Recovery, Verified Backups, Data Integrity, and Controlled Self-Repair Boundaries
+  RECOVERY_GET_STATUS: 'recovery:getStatus',
+  RECOVERY_LIST_BACKUPS: 'recovery:listBackups',
+  RECOVERY_CREATE_BACKUP: 'recovery:createBackup',
+  RECOVERY_VERIFY_BACKUP: 'recovery:verifyBackup',
+  RECOVERY_RESTORE_PREVIEW: 'recovery:restorePreview',
+  RECOVERY_EXECUTE_RESTORE: 'recovery:executeRestore',
+  RECOVERY_RUN_DIAGNOSTICS: 'recovery:runDiagnostics',
+  RECOVERY_EXECUTE_REPAIR: 'recovery:executeRepair'
 } as const
 
 export type IpcChannel = typeof IPC_CHANNELS[keyof typeof IPC_CHANNELS]

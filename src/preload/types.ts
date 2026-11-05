@@ -230,6 +230,17 @@ export interface HelioxenApi {
   readonly widgets: HelioxenWidgetsApi
   /** Agent Town, Plugin Connectors, and Dynamic Skills (Phase 14 Step 40) */
   readonly agents: HelioxenAgentsApi
+  /** Office Document Studio, Spreadsheets, Presentations, and AI Productivity (Phase 15 Step 43) */
+  readonly office: HelioxenOfficeApi
+  /** Communication & Media Integrations (Phase 15 Step 44) */
+  readonly integrations: HelioxenIntegrationsApi
+  readonly communication: HelioxenCommunicationApi
+  readonly mediaIntegration: HelioxenMediaIntegrationsApi
+  /** Optional Android & Smart-Home Integrations (Phase 15 Step 45) */
+  readonly devices: HelioxenDevicesApi
+  readonly smartHome: HelioxenSmartHomeApi
+  /** Crash Recovery, Verified Backups, and Controlled Self-Repair (Phase 16 Step 46) */
+  readonly recovery: HelioxenRecoveryApi
 }
 
 import {
@@ -832,4 +843,168 @@ export interface HelioxenAgentsApi {
   importSkillPackage: (rawJson: string, options?: { newId?: string; author?: string }) => Promise<DynamicSkillDefinition>
   generateSkillDraftWithAi: (prompt: string, category?: string) => Promise<DynamicSkillDefinition>
   refineSkillWithAi: (skillId: string, instruction: string) => Promise<DynamicSkillDefinition>
+}
+
+import {
+  OfficeDocumentMetadata,
+  WordDocumentModel,
+  SpreadsheetWorkbookModel,
+  PresentationModel,
+  OfficeTemplate,
+  OfficeAiDraftRequest,
+  OfficeAiDraftResponse,
+  OfficeExportRequest,
+  OfficeExportResult,
+  OfficeImportResult
+} from '../shared/office/types'
+
+export interface HelioxenOfficeApi {
+  listDocuments: () => Promise<OfficeDocumentMetadata[]>
+  getDocument: (documentId: string) => Promise<WordDocumentModel | SpreadsheetWorkbookModel | PresentationModel | null>
+  saveDocument: (doc: WordDocumentModel | SpreadsheetWorkbookModel | PresentationModel) => Promise<OfficeDocumentMetadata>
+  deleteDocument: (documentId: string) => Promise<boolean>
+  listTemplates: () => Promise<OfficeTemplate[]>
+  createFromTemplate: (templateId: string, title?: string) => Promise<WordDocumentModel | SpreadsheetWorkbookModel | PresentationModel>
+  exportDocument: (request: OfficeExportRequest) => Promise<OfficeExportResult>
+  importDocument: (sourceFilePath?: string) => Promise<OfficeImportResult>
+  generateAiDraft: (request: OfficeAiDraftRequest) => Promise<OfficeAiDraftResponse>
+  rewriteTextAi: (text: string, instruction: string) => Promise<string>
+  suggestFormulaAi: (description: string, sampleDataSnippet?: string) => Promise<{ formula: string; explanation: string }>
+}
+
+import {
+  IntegrationDescriptor,
+  IntegrationConnectionStatus,
+  ConnectIntegrationRequest,
+  DisconnectIntegrationRequest,
+  IntegrationOperationResult
+} from '../shared/integrations/types'
+
+export interface HelioxenIntegrationsApi {
+  listIntegrations: () => Promise<IntegrationDescriptor[]>
+  getIntegration: (id: string) => Promise<IntegrationDescriptor | null>
+  connectIntegration: (request: ConnectIntegrationRequest) => Promise<IntegrationOperationResult>
+  disconnectIntegration: (request: DisconnectIntegrationRequest) => Promise<IntegrationOperationResult>
+  checkHealth: (id: string) => Promise<{ status: IntegrationConnectionStatus; error?: string; latencyMs?: number }>
+}
+
+import {
+  CommunicationChannelType,
+  CommunicationMessage,
+  MessageDraft,
+  SendConfirmationRequest,
+  SendMessageRequest,
+  SendMessageResult,
+  CommunicationSearchQuery,
+  CommunicationAiDraftRequest,
+  CommunicationAiDraftResponse,
+  MessageRecipient,
+  MessageAttachment
+} from '../shared/communication/types'
+
+export interface HelioxenCommunicationApi {
+  listMessages: (query?: CommunicationSearchQuery) => Promise<CommunicationMessage[]>
+  getMessage: (messageId: string) => Promise<CommunicationMessage | null>
+  listDrafts: (channel?: string) => Promise<MessageDraft[]>
+  getDraft: (draftId: string) => Promise<MessageDraft | null>
+  createDraft: (draft: {
+    integrationId?: string
+    channelType: CommunicationChannelType
+    recipients: readonly MessageRecipient[]
+    subject?: string
+    body: string
+    attachments?: readonly MessageAttachment[]
+  }) => Promise<MessageDraft>
+  updateDraft: (draftId: string, patch: Partial<MessageDraft>) => Promise<MessageDraft>
+  deleteDraft: (draftId: string) => Promise<boolean>
+  requestSendConfirmation: (request: { draftId: string }) => Promise<SendConfirmationRequest>
+  confirmAndSend: (request: SendMessageRequest) => Promise<SendMessageResult>
+  generateAiDraft: (request: CommunicationAiDraftRequest) => Promise<CommunicationAiDraftResponse>
+}
+
+import {
+  MediaCatalogSearchQuery,
+  MediaCatalogSearchResult,
+  MediaPlaylist,
+  MediaPlaybackDevice,
+  MediaPlaybackState,
+  MediaControlCommand,
+  MediaControlResult
+} from '../shared/media-integrations/types'
+
+export interface HelioxenMediaIntegrationsApi {
+  searchCatalog: (query: MediaCatalogSearchQuery) => Promise<MediaCatalogSearchResult>
+  listPlaylists: (integrationId?: string) => Promise<MediaPlaylist[]>
+  listDevices: (integrationId?: string) => Promise<MediaPlaybackDevice[]>
+  getPlaybackState: (integrationId?: string) => Promise<MediaPlaybackState>
+  executeControl: (command: MediaControlCommand) => Promise<MediaControlResult>
+}
+
+import {
+  AndroidDevice,
+  AndroidPairingRequest,
+  AndroidPairingResult,
+  AndroidActionCommand,
+  AndroidActionResult
+} from '../shared/devices/types'
+
+export interface HelioxenDevicesApi {
+  listAndroid: () => Promise<AndroidDevice[]>
+  getAndroidStatus: (deviceId?: string) => Promise<AndroidDevice | null>
+  pairAndroid: (request: AndroidPairingRequest) => Promise<AndroidPairingResult>
+  disconnectAndroid: (deviceId: string) => Promise<boolean>
+  executeAndroidAction: (command: AndroidActionCommand) => Promise<AndroidActionResult>
+}
+
+import {
+  SmartHomeEntity,
+  SmartHomeHubDescriptor,
+  SmartHomeActionCommand,
+  SmartHomeActionResult,
+  SmartHomeSecurityConfirmationRequest,
+  SmartHomeEntityDomain
+} from '../shared/smart-home/types'
+
+export interface HelioxenSmartHomeApi {
+  getHubStatus: (hubId?: string) => Promise<SmartHomeHubDescriptor | null>
+  connectHub: (params: {
+    hubId: string
+    endpointUrl: string
+    accessToken?: string
+    displayName?: string
+  }) => Promise<{ success: boolean; hub?: SmartHomeHubDescriptor; error?: string }>
+  disconnectHub: (hubId: string) => Promise<boolean>
+  listEntities: (query?: { hubId?: string; domain?: SmartHomeEntityDomain }) => Promise<SmartHomeEntity[]>
+  getEntityState: (entityId: string) => Promise<SmartHomeEntity | null>
+  requestSecurityConfirmation: (params: {
+    hubId: string
+    entityId: string
+    command: string
+  }) => Promise<SmartHomeSecurityConfirmationRequest>
+  executeAction: (command: SmartHomeActionCommand) => Promise<SmartHomeActionResult>
+}
+
+import {
+  RecoveryOverview,
+  BackupManifest,
+  BackupCreationRequest,
+  BackupCreationResult,
+  BackupVerificationResult,
+  RestorePreview,
+  RestoreExecutionRequest,
+  RestoreExecutionResult,
+  DiagnosticReport,
+  SelfRepairRequest,
+  SelfRepairResult
+} from '../shared/recovery/types'
+
+export interface HelioxenRecoveryApi {
+  getStatus: () => Promise<RecoveryOverview>
+  listBackups: () => Promise<BackupManifest[]>
+  createBackup: (request?: BackupCreationRequest) => Promise<BackupCreationResult>
+  verifyBackup: (backupId: string) => Promise<BackupVerificationResult>
+  getRestorePreview: (backupId: string) => Promise<RestorePreview>
+  executeRestore: (request: RestoreExecutionRequest) => Promise<RestoreExecutionResult>
+  runDiagnostics: () => Promise<DiagnosticReport>
+  executeRepair: (request: SelfRepairRequest) => Promise<SelfRepairResult>
 }

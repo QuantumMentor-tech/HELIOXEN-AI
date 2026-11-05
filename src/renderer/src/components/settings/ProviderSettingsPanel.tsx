@@ -44,6 +44,7 @@ import {
   CURATED_PROVIDERS
 } from '../../../../shared/ai/models'
 import { VoiceSettingsSection } from './VoiceSettingsSection'
+import { RecoveryCenterPanel } from '../recovery/RecoveryCenterPanel'
 
 export interface ProviderSettingsPanelProps {
   className?: string
@@ -1087,6 +1088,11 @@ export const ProviderSettingsPanel: React.FC<ProviderSettingsPanelProps> = ({
       {/* Voice Input, Wake-Word & Assistant Speech Preferences (Phase 7, Step 21) */}
       <div className="pt-4 border-t border-hx-border-subtle">
         <VoiceSettingsSection />
+      </div>
+
+      {/* Crash Recovery, Verified Backups & Controlled Self-Repair (Phase 16, Step 46) */}
+      <div className="pt-6 border-t border-hx-border-subtle">
+        <RecoveryCenterPanel />
       </div>
     </div>
   )

@@ -678,6 +678,38 @@ export function createMainToolDispatcher(): ToolDispatcher {
     }
   })
 
+  // Step 46: Connect Recovery, Verified Backups, and Self-Repair tools
+  dispatcher.registerHandler('recovery:get_status', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { getRecoveryService } = require('../recovery')
+    return getRecoveryService().getOverview()
+  })
+
+  dispatcher.registerHandler('recovery:list_backups', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { getRecoveryService } = require('../recovery')
+    const backups = getRecoveryService().listBackups()
+    return { backups }
+  })
+
+  dispatcher.registerHandler('recovery:create_backup', async (input) => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { getRecoveryService } = require('../recovery')
+    return await getRecoveryService().createBackup(input)
+  })
+
+  dispatcher.registerHandler('recovery:run_diagnostics', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { getRecoveryService } = require('../recovery')
+    return getRecoveryService().runDiagnostics()
+  })
+
+  dispatcher.registerHandler('recovery:execute_repair', async (input) => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { getRecoveryService } = require('../recovery')
+    return await getRecoveryService().executeRepair(input)
+  })
+
   return dispatcher
 }
 

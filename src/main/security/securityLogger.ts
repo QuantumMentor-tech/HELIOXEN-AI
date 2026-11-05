@@ -12,6 +12,22 @@ export type SecurityEventType =
   | 'PREFERENCES_OPERATION'
   | 'ROUTING_DECISION'
   | 'HEALTH_UPDATE'
+  | 'SEND_CONFIRMATION_REQUEST'
+  | 'MESSAGE_SEND'
+  | 'INTEGRATION_CONNECT'
+  | 'INTEGRATION_DISCONNECT'
+  | 'MEDIA_CONTROL_ACTION'
+  | 'DEVICE_PAIRING'
+  | 'DEVICE_ACTION'
+  | 'SMART_HOME_ACTION'
+  | 'SMART_HOME_SECURITY_CONFIRMATION'
+  | 'RECOVERY_CRASH_DETECTED'
+  | 'RECOVERY_STARTUP_CHECK'
+  | 'BACKUP_CREATE'
+  | 'BACKUP_RESTORE'
+  | 'BACKUP_RETENTION'
+  | 'SELF_REPAIR_DIAGNOSTIC'
+  | 'SELF_REPAIR_ACTION'
 
 export type SecurityOutcome = 'PERMITTED' | 'DENIED' | 'CANCELLED' | 'ERROR'
 
@@ -30,17 +46,27 @@ export interface SecurityEvent {
 const SENSITIVE_KEY_PATTERN = /key|secret|token|password|auth|credential|api_key|bearer/i
 
 /**
- * Redacts any potential sensitive keys from a details payload.
+ * Redacts any potential sensitive keys from a details payload recursively, including nested objects and arrays.
  */
-export function redactSensitiveData(data?: Record<string, unknown>): Record<string, unknown> | undefined {
-  if (!data) return undefined
+export function redactSensitiveData(data?: unknown): any {
+  if (!data) return data
+  if (typeof data !== 'object') return data
+
+  if (Array.isArray(data)) {
+    return data.map((item) => {
+      if (item && typeof item === 'object') {
+        return redactSensitiveData(item)
+      }
+      return item
+    })
+  }
 
   const sanitized: Record<string, unknown> = {}
-  for (const [key, value] of Object.entries(data)) {
+  for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
     if (SENSITIVE_KEY_PATTERN.test(key)) {
       sanitized[key] = '[REDACTED]'
-    } else if (value && typeof value === 'object' && !Array.isArray(value)) {
-      sanitized[key] = redactSensitiveData(value as Record<string, unknown>)
+    } else if (value && typeof value === 'object') {
+      sanitized[key] = redactSensitiveData(value)
     } else {
       sanitized[key] = value
     }

@@ -20,7 +20,14 @@ import {
   HelioxenVisualHubApi,
   HelioxenWorldMonitorApi,
   HelioxenWidgetsApi,
-  HelioxenAgentsApi
+  HelioxenAgentsApi,
+  HelioxenOfficeApi,
+  HelioxenIntegrationsApi,
+  HelioxenCommunicationApi,
+  HelioxenMediaIntegrationsApi,
+  HelioxenDevicesApi,
+  HelioxenSmartHomeApi,
+  HelioxenRecoveryApi
 } from './types'
 import {
   ResearchSearchQuery,
@@ -841,6 +848,129 @@ const agentsApi: HelioxenAgentsApi = Object.freeze<HelioxenAgentsApi>({
     ipcRenderer.invoke(IPC_CHANNELS.SKILLS_REFINE_AI_DRAFT, { skillId, instruction })
 })
 
+const officeApi: HelioxenOfficeApi = Object.freeze({
+  listDocuments: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.OFFICE_LIST_DOCUMENTS),
+  getDocument: (documentId: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.OFFICE_GET_DOCUMENT, { documentId }),
+  saveDocument: (doc: any) =>
+    ipcRenderer.invoke(IPC_CHANNELS.OFFICE_SAVE_DOCUMENT, { document: doc }),
+  deleteDocument: (documentId: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.OFFICE_DELETE_DOCUMENT, { documentId }),
+  listTemplates: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.OFFICE_LIST_TEMPLATES),
+  createFromTemplate: (templateId: string, title?: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.OFFICE_CREATE_FROM_TEMPLATE, { templateId, title }),
+  exportDocument: (request: any) =>
+    ipcRenderer.invoke(IPC_CHANNELS.OFFICE_EXPORT_DOCUMENT, request),
+  importDocument: (sourceFilePath?: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.OFFICE_IMPORT_DOCUMENT, { sourceFilePath }),
+  generateAiDraft: (request: any) =>
+    ipcRenderer.invoke(IPC_CHANNELS.OFFICE_GENERATE_AI_DRAFT, request),
+  rewriteTextAi: (text: string, instruction: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.OFFICE_REWRITE_TEXT_AI, { text, instruction }),
+  suggestFormulaAi: (description: string, sampleDataSnippet?: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.OFFICE_SUGGEST_FORMULA_AI, { description, sampleDataSnippet })
+})
+
+const integrationsApi: HelioxenIntegrationsApi = Object.freeze({
+  listIntegrations: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.INTEGRATIONS_LIST),
+  getIntegration: (id: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.INTEGRATIONS_GET, { integrationId: id }),
+  connectIntegration: (request: any) =>
+    ipcRenderer.invoke(IPC_CHANNELS.INTEGRATIONS_CONNECT, request),
+  disconnectIntegration: (request: any) =>
+    ipcRenderer.invoke(IPC_CHANNELS.INTEGRATIONS_DISCONNECT, request),
+  checkHealth: (id: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.INTEGRATIONS_HEALTH_CHECK, { integrationId: id })
+})
+
+const communicationApi: HelioxenCommunicationApi = Object.freeze({
+  listMessages: (query?: any) =>
+    ipcRenderer.invoke(IPC_CHANNELS.COMMUNICATION_LIST_MESSAGES, query),
+  getMessage: (messageId: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.COMMUNICATION_GET_MESSAGE, { messageId }),
+  listDrafts: (channel?: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.COMMUNICATION_LIST_DRAFTS, { channel }),
+  getDraft: (draftId: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.COMMUNICATION_GET_DRAFT, { draftId }),
+  createDraft: (draft: any) =>
+    ipcRenderer.invoke(IPC_CHANNELS.COMMUNICATION_CREATE_DRAFT, draft),
+  updateDraft: (draftId: string, patch: any) =>
+    ipcRenderer.invoke(IPC_CHANNELS.COMMUNICATION_UPDATE_DRAFT, { draftId, updates: patch }),
+  deleteDraft: (draftId: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.COMMUNICATION_DELETE_DRAFT, { draftId }),
+  requestSendConfirmation: (request: any) =>
+    ipcRenderer.invoke(IPC_CHANNELS.COMMUNICATION_REQUEST_SEND_CONFIRMATION, request),
+  confirmAndSend: (request: any) =>
+    ipcRenderer.invoke(IPC_CHANNELS.COMMUNICATION_CONFIRM_AND_SEND, request),
+  generateAiDraft: (request: any) =>
+    ipcRenderer.invoke(IPC_CHANNELS.COMMUNICATION_GENERATE_AI_DRAFT, request)
+})
+
+const mediaIntegrationApi: HelioxenMediaIntegrationsApi = Object.freeze({
+  searchCatalog: (query: any) =>
+    ipcRenderer.invoke(IPC_CHANNELS.MEDIA_INTEGRATION_SEARCH, query),
+  listPlaylists: (integrationId?: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.MEDIA_INTEGRATION_LIST_PLAYLISTS, { integrationId }),
+  listDevices: (integrationId?: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.MEDIA_INTEGRATION_LIST_DEVICES, { integrationId }),
+  getPlaybackState: (integrationId?: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.MEDIA_INTEGRATION_GET_PLAYBACK_STATE, { integrationId }),
+  executeControl: (command: any) =>
+    ipcRenderer.invoke(IPC_CHANNELS.MEDIA_INTEGRATION_CONTROL_PLAYBACK, command)
+})
+
+const devicesApi: HelioxenDevicesApi = Object.freeze({
+  listAndroid: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.DEVICES_LIST_ANDROID),
+  getAndroidStatus: (deviceId?: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.DEVICES_GET_ANDROID_STATUS, { deviceId }),
+  pairAndroid: (request: any) =>
+    ipcRenderer.invoke(IPC_CHANNELS.DEVICES_PAIR_ANDROID, request),
+  disconnectAndroid: (deviceId: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.DEVICES_DISCONNECT_ANDROID, { deviceId }),
+  executeAndroidAction: (command: any) =>
+    ipcRenderer.invoke(IPC_CHANNELS.DEVICES_EXECUTE_ANDROID_ACTION, command)
+})
+
+const smartHomeApi: HelioxenSmartHomeApi = Object.freeze({
+  getHubStatus: (hubId?: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.SMART_HOME_GET_HUB_STATUS, { hubId }),
+  connectHub: (params: any) =>
+    ipcRenderer.invoke(IPC_CHANNELS.SMART_HOME_CONNECT_HUB, params),
+  disconnectHub: (hubId: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.SMART_HOME_DISCONNECT_HUB, { hubId }),
+  listEntities: (query?: any) =>
+    ipcRenderer.invoke(IPC_CHANNELS.SMART_HOME_LIST_ENTITIES, query),
+  getEntityState: (entityId: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.SMART_HOME_GET_ENTITY_STATE, { entityId }),
+  requestSecurityConfirmation: (params: any) =>
+    ipcRenderer.invoke(IPC_CHANNELS.SMART_HOME_REQUEST_SECURITY_CONFIRMATION, params),
+  executeAction: (command: any) =>
+    ipcRenderer.invoke(IPC_CHANNELS.SMART_HOME_EXECUTE_ACTION, command)
+})
+
+const recoveryApi: HelioxenRecoveryApi = Object.freeze({
+  getStatus: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.RECOVERY_GET_STATUS),
+  listBackups: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.RECOVERY_LIST_BACKUPS),
+  createBackup: (request?: any) =>
+    ipcRenderer.invoke(IPC_CHANNELS.RECOVERY_CREATE_BACKUP, request),
+  verifyBackup: (backupId: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.RECOVERY_VERIFY_BACKUP, { backupId }),
+  getRestorePreview: (backupId: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.RECOVERY_RESTORE_PREVIEW, { backupId }),
+  executeRestore: (request: any) =>
+    ipcRenderer.invoke(IPC_CHANNELS.RECOVERY_EXECUTE_RESTORE, request),
+  runDiagnostics: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.RECOVERY_RUN_DIAGNOSTICS),
+  executeRepair: (request: any) =>
+    ipcRenderer.invoke(IPC_CHANNELS.RECOVERY_EXECUTE_REPAIR, request)
+})
+
 const helioxenApi: HelioxenApi = Object.freeze({
   platform: process.platform,
   environment: process.env.NODE_ENV || 'development',
@@ -870,7 +1000,14 @@ const helioxenApi: HelioxenApi = Object.freeze({
   visual: visualHubApi,
   world: worldMonitorApi,
   widgets: widgetsApi,
-  agents: agentsApi
+  agents: agentsApi,
+  office: officeApi,
+  integrations: integrationsApi,
+  communication: communicationApi,
+  mediaIntegration: mediaIntegrationApi,
+  devices: devicesApi,
+  smartHome: smartHomeApi,
+  recovery: recoveryApi
 })
 
 try {

@@ -3470,6 +3470,578 @@ export const SkillsExecuteSkillTool: ToolDefinition<
   tags: ['skills', 'workflow', 'orchestration', 'execute']
 }
 
+/**
+ * Tool: communication:search_messages
+ */
+export const CommSearchMessagesTool: ToolDefinition<
+  { channel?: string; query?: string; unreadOnly?: boolean; limit?: number },
+  { success: boolean; total: number; messages: Array<{ id: string; subject?: string; preview?: string; timestamp: string }> }
+> = {
+  id: 'communication:search_messages',
+  displayName: 'Search Communication Messages',
+  description: 'Searches and retrieves messages across connected communication channels (email, webhooks) with safety isolation.',
+  category: 'utility',
+  version: '1.0.0',
+  inputSchema: z.object({
+    channel: z.string().optional(),
+    query: z.string().optional(),
+    unreadOnly: z.boolean().optional(),
+    limit: z.number().int().min(1).max(100).optional()
+  }),
+  outputSchema: z.object({
+    success: z.boolean(),
+    total: z.number(),
+    messages: z.array(z.object({
+      id: z.string(),
+      subject: z.string().optional(),
+      preview: z.string().optional(),
+      timestamp: z.string()
+    }))
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      channel: { type: 'string', description: 'Filter by channel type: email, chat_webhook.' },
+      query: { type: 'string', description: 'Search term or keyword.' },
+      unreadOnly: { type: 'boolean', description: 'Whether to restrict results to unread messages.' },
+      limit: { type: 'number', description: 'Maximum number of items to return (1-100).' }
+    }
+  },
+  requiredCapabilities: ['communication:read'],
+  riskTier: 'low',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'asynchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: DEFAULT_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['communication', 'email', 'messages', 'search']
+}
+
+/**
+ * Tool: communication:create_draft
+ */
+export const CommCreateDraftTool: ToolDefinition<
+  { channel: string; recipients: Array<{ address: string; name?: string; role?: string }>; subject?: string; body: string },
+  { success: boolean; draftId: string; draftHash: string; unresolvedPlaceholders: string[]; validationErrors: string[] }
+> = {
+  id: 'communication:create_draft',
+  displayName: 'Create Message Draft',
+  description: 'Creates a quarantined draft message with placeholder analysis and recipient validation without dispatching externally.',
+  category: 'utility',
+  version: '1.0.0',
+  inputSchema: z.object({
+    channel: z.string().min(1),
+    recipients: z.array(z.object({
+      address: z.string().min(1),
+      name: z.string().optional(),
+      role: z.string().optional()
+    })),
+    subject: z.string().optional(),
+    body: z.string()
+  }),
+  outputSchema: z.object({
+    success: z.boolean(),
+    draftId: z.string(),
+    draftHash: z.string(),
+    unresolvedPlaceholders: z.array(z.string()),
+    validationErrors: z.array(z.string())
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      channel: { type: 'string', description: 'Channel type: email, chat_webhook.' },
+      recipients: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            address: { type: 'string' },
+            name: { type: 'string' },
+            role: { type: 'string' }
+          },
+          required: ['address']
+        }
+      },
+      subject: { type: 'string', description: 'Draft subject header.' },
+      body: { type: 'string', description: 'Draft body content.' }
+    },
+    required: ['channel', 'recipients', 'body']
+  },
+  requiredCapabilities: ['communication:draft'],
+  riskTier: 'low',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'asynchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: DEFAULT_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['communication', 'draft', 'compose']
+}
+
+/**
+ * Tool: communication:send_message
+ */
+export const CommSendMessageTool: ToolDefinition<
+  { draftId: string; confirmationToken: string; idempotencyKey?: string },
+  { success: boolean; messageId?: string; sentAt?: string; error?: string }
+> = {
+  id: 'communication:send_message',
+  displayName: 'Send Communication Message',
+  description: 'Sends a validated draft externally. Strictly requires human confirmation token bound to exact content hash.',
+  category: 'utility',
+  version: '1.0.0',
+  inputSchema: z.object({
+    draftId: z.string().min(1),
+    confirmationToken: z.string().min(1),
+    idempotencyKey: z.string().optional()
+  }),
+  outputSchema: z.object({
+    success: z.boolean(),
+    messageId: z.string().optional(),
+    sentAt: z.string().optional(),
+    error: z.string().optional()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      draftId: { type: 'string', description: 'ID of the validated draft.' },
+      confirmationToken: { type: 'string', description: 'User-authorized confirmation token matching content hash.' },
+      idempotencyKey: { type: 'string', description: 'Optional unique key preventing duplicate transmission.' }
+    },
+    required: ['draftId', 'confirmationToken']
+  },
+  requiredCapabilities: ['communication:send'],
+  riskTier: 'high',
+  confirmationPolicy: 'user_confirmation',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'asynchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: NO_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['communication', 'send', 'email', 'webhook']
+}
+
+/**
+ * Tool: media:control_playback
+ */
+export const MediaControlPlaybackTool: ToolDefinition<
+  { action: string; integrationId?: string; value?: number; deviceId?: string },
+  { success: boolean; state: { isPlaying: boolean; volume: number; progressMs: number; activeDeviceId?: string }; error?: string }
+> = {
+  id: 'media:control_playback',
+  displayName: 'Control Media Playback',
+  description: 'Controls authorized media player playback (play, pause, skip, seek, volume, select device).',
+  category: 'media',
+  version: '1.0.0',
+  inputSchema: z.object({
+    action: z.string().min(1),
+    integrationId: z.string().optional(),
+    value: z.number().optional(),
+    deviceId: z.string().optional()
+  }),
+  outputSchema: z.object({
+    success: z.boolean(),
+    state: z.object({
+      isPlaying: z.boolean(),
+      volume: z.number(),
+      progressMs: z.number(),
+      activeDeviceId: z.string().optional()
+    }),
+    error: z.string().optional()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      action: { type: 'string', description: 'Action: play, pause, toggle_play, skip_next, skip_previous, seek, set_volume, select_device.' },
+      integrationId: { type: 'string', description: 'Optional integration ID target.' },
+      value: { type: 'number', description: 'Numeric parameter for seek or set_volume.' },
+      deviceId: { type: 'string', description: 'Target playback device ID for select_device.' }
+    },
+    required: ['action']
+  },
+  requiredCapabilities: ['media_integration:control'],
+  riskTier: 'low',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'asynchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: DEFAULT_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['media', 'playback', 'music', 'player']
+}
+
+/**
+ * Tool: device:get_android_status
+ */
+export const DeviceGetAndroidStatusTool: ToolDefinition<
+  { deviceId?: string },
+  { success: boolean; devices: Array<{ id: string; model: string; batteryPercent: number; status: string }> }
+> = {
+  id: 'device:get_android_status',
+  displayName: 'Get Android Device Status',
+  description: 'Inspects connected Android devices, battery telemetry, and connection status via approved allowlisted interfaces.',
+  category: 'system',
+  version: '1.0.0',
+  inputSchema: z.object({
+    deviceId: z.string().optional()
+  }),
+  outputSchema: z.object({
+    success: z.boolean(),
+    devices: z.array(z.object({
+      id: z.string(),
+      model: z.string(),
+      batteryPercent: z.number(),
+      status: z.string()
+    }))
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      deviceId: { type: 'string', description: 'Optional serial or identifier of the target device.' }
+    }
+  },
+  requiredCapabilities: ['device:read'],
+  riskTier: 'low',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'asynchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: DEFAULT_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['device', 'android', 'status', 'battery']
+}
+
+/**
+ * Tool: device:execute_android_action
+ */
+export const DeviceExecuteAndroidActionTool: ToolDefinition<
+  { deviceId: string; action: string; parameters?: Record<string, unknown> },
+  { success: boolean; deviceId: string; action: string; data?: Record<string, unknown>; error?: string }
+> = {
+  id: 'device:execute_android_action',
+  displayName: 'Execute Android Action',
+  description: 'Executes a finite, strictly allowlisted Android action (ping, battery, screen state, test intent) without arbitrary shell access.',
+  category: 'system',
+  version: '1.0.0',
+  inputSchema: z.object({
+    deviceId: z.string().min(1),
+    action: z.string().min(1),
+    parameters: z.record(z.string(), z.unknown()).optional()
+  }),
+  outputSchema: z.object({
+    success: z.boolean(),
+    deviceId: z.string(),
+    action: z.string(),
+    data: z.record(z.string(), z.unknown()).optional(),
+    error: z.string().optional()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      deviceId: { type: 'string', description: 'Target Android device identifier.' },
+      action: { type: 'string', description: 'Allowlisted action name: ping, get_device_properties, get_battery_status, get_screen_state, send_test_intent.' },
+      parameters: { type: 'object', description: 'Validated parameters for the action.' }
+    },
+    required: ['deviceId', 'action']
+  },
+  requiredCapabilities: ['device:action'],
+  riskTier: 'moderate',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'asynchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: DEFAULT_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['device', 'android', 'action', 'telemetry']
+}
+
+/**
+ * Tool: smart_home:list_entities
+ */
+export const SmartHomeListEntitiesTool: ToolDefinition<
+  { hubId?: string; domain?: string },
+  { success: boolean; count: number; entities: Array<{ entityId: string; domain: string; friendlyName: string; state: string; riskClass: string }> }
+> = {
+  id: 'smart_home:list_entities',
+  displayName: 'List Smart-Home Entities',
+  description: 'Discovers available smart-home entities (lights, climate, sensors, locks) across authorized hubs.',
+  category: 'workspace',
+  version: '1.0.0',
+  inputSchema: z.object({
+    hubId: z.string().optional(),
+    domain: z.string().optional()
+  }),
+  outputSchema: z.object({
+    success: z.boolean(),
+    count: z.number(),
+    entities: z.array(z.object({
+      entityId: z.string(),
+      domain: z.string(),
+      friendlyName: z.string(),
+      state: z.string(),
+      riskClass: z.string()
+    }))
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      hubId: { type: 'string', description: 'Optional hub ID filter.' },
+      domain: { type: 'string', description: 'Optional entity domain filter: light, switch, climate, sensor, lock, cover, alarm.' }
+    }
+  },
+  requiredCapabilities: ['smart_home:read'],
+  riskTier: 'low',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'asynchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: DEFAULT_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['smart_home', 'iot', 'entities', 'discovery']
+}
+
+/**
+ * Tool: smart_home:get_state
+ */
+export const SmartHomeGetStateTool: ToolDefinition<
+  { entityId: string },
+  { success: boolean; entityId: string; state: string; attributes: Record<string, unknown>; isAvailable: boolean }
+> = {
+  id: 'smart_home:get_state',
+  displayName: 'Get Smart-Home Entity State',
+  description: 'Inspects real-time state and environmental telemetry for a designated smart-home entity.',
+  category: 'workspace',
+  version: '1.0.0',
+  inputSchema: z.object({
+    entityId: z.string().min(1)
+  }),
+  outputSchema: z.object({
+    success: z.boolean(),
+    entityId: z.string(),
+    state: z.string(),
+    attributes: z.record(z.string(), z.unknown()),
+    isAvailable: z.boolean()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      entityId: { type: 'string', description: 'Target entity ID (e.g. light.living_room_ceiling).' }
+    },
+    required: ['entityId']
+  },
+  requiredCapabilities: ['smart_home:read'],
+  riskTier: 'low',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'asynchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: DEFAULT_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['smart_home', 'state', 'sensor', 'telemetry']
+}
+
+/**
+ * Tool: smart_home:execute_action
+ */
+export const SmartHomeExecuteActionTool: ToolDefinition<
+  { hubId: string; entityId: string; command: string; parameters?: Record<string, unknown>; confirmationToken?: string },
+  { success: boolean; entityId: string; command: string; outcome: string; message: string; error?: string }
+> = {
+  id: 'smart_home:execute_action',
+  displayName: 'Execute Smart-Home Action',
+  description: 'Actuates authorized smart-home devices. High-impact physical security operations (locks, alarms) strictly require confirmation token.',
+  category: 'workspace',
+  version: '1.0.0',
+  inputSchema: z.object({
+    hubId: z.string().min(1),
+    entityId: z.string().min(1),
+    command: z.string().min(1),
+    parameters: z.record(z.string(), z.unknown()).optional(),
+    confirmationToken: z.string().optional()
+  }),
+  outputSchema: z.object({
+    success: z.boolean(),
+    entityId: z.string(),
+    command: z.string(),
+    outcome: z.string(),
+    message: z.string(),
+    error: z.string().optional()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      hubId: { type: 'string', description: 'Hub identifier managing the entity.' },
+      entityId: { type: 'string', description: 'Target entity identifier.' },
+      command: { type: 'string', description: 'Command to actuate (e.g. turn_on, turn_off, set_temperature, lock, unlock).' },
+      parameters: { type: 'object', description: 'Optional command parameters (e.g. brightness, temperature).' },
+      confirmationToken: { type: 'string', description: 'Explicit user authorization token for high-impact physical security actions.' }
+    },
+    required: ['hubId', 'entityId', 'command']
+  },
+  requiredCapabilities: ['smart_home:control'],
+  riskTier: 'high',
+  confirmationPolicy: 'user_confirmation',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'asynchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: NO_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['smart_home', 'action', 'actuation', 'physical']
+}
+
+/**
+ * Step 46: Recovery, Backup & Bounded Self-Repair Tools
+ */
+export const RecoveryGetStatusTool: ToolDefinition = {
+  id: 'recovery:get_status',
+  displayName: 'Get Recovery and Session Status',
+  description: 'Inspects application crash recovery state, session health, interrupted operations, and latest verified backup.',
+  category: 'system',
+  version: '1.0.0',
+  inputSchema: z.object({}),
+  outputSchema: z.record(z.string(), z.unknown()),
+  jsonSchema: { type: 'object', properties: {} },
+  requiredCapabilities: ['recovery:read'],
+  riskTier: 'low',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'synchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: DEFAULT_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['recovery', 'status', 'integrity', 'session']
+}
+
+export const RecoveryListBackupsTool: ToolDefinition = {
+  id: 'recovery:list_backups',
+  displayName: 'List Verified Backups',
+  description: 'Enumerates verified, versioned application backups with checksum and manifest metadata.',
+  category: 'system',
+  version: '1.0.0',
+  inputSchema: z.object({}),
+  outputSchema: z.object({
+    backups: z.array(z.record(z.string(), z.unknown()))
+  }),
+  jsonSchema: { type: 'object', properties: {} },
+  requiredCapabilities: ['recovery:read'],
+  riskTier: 'low',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'synchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: DEFAULT_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['recovery', 'backup', 'list']
+}
+
+export const RecoveryCreateBackupTool: ToolDefinition = {
+  id: 'recovery:create_backup',
+  displayName: 'Create Verified Backup',
+  description: 'Captures a consistent, atomic, SHA-256 verified snapshot of eligible application stores.',
+  category: 'system',
+  version: '1.0.0',
+  inputSchema: z.object({
+    categories: z.array(z.string()).optional(),
+    label: z.string().optional()
+  }),
+  outputSchema: z.object({
+    success: z.boolean(),
+    backupId: z.string().optional(),
+    message: z.string(),
+    error: z.string().optional(),
+    durationMs: z.number().optional()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      categories: { type: 'array', items: { type: 'string' } },
+      label: { type: 'string' }
+    }
+  },
+  requiredCapabilities: ['recovery:backup'],
+  riskTier: 'moderate',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'asynchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: NO_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['recovery', 'backup', 'snapshot']
+}
+
+export const RecoveryRunDiagnosticsTool: ToolDefinition = {
+  id: 'recovery:run_diagnostics',
+  displayName: 'Run System Integrity Diagnostics',
+  description: 'Executes bounded, read-only diagnostics across application stores, cache, and session state to identify recoverable issues.',
+  category: 'system',
+  version: '1.0.0',
+  inputSchema: z.object({}),
+  outputSchema: z.record(z.string(), z.unknown()),
+  jsonSchema: { type: 'object', properties: {} },
+  requiredCapabilities: ['recovery:read'],
+  riskTier: 'low',
+  confirmationPolicy: 'none',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'asynchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: DEFAULT_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['recovery', 'diagnostics', 'health']
+}
+
+export const RecoveryExecuteRepairTool: ToolDefinition = {
+  id: 'recovery:execute_repair',
+  displayName: 'Execute Bounded Self-Repair',
+  description: 'Executes an approved, deterministic repair from the registered repair catalog under strict security boundaries.',
+  category: 'system',
+  version: '1.0.0',
+  inputSchema: z.object({
+    repairId: z.string().min(1),
+    confirmedByHuman: z.boolean().optional(),
+    parameters: z.record(z.string(), z.unknown()).optional()
+  }),
+  outputSchema: z.object({
+    success: z.boolean(),
+    repairId: z.string(),
+    message: z.string(),
+    error: z.string().optional(),
+    changesSummary: z.array(z.string()).optional()
+  }),
+  jsonSchema: {
+    type: 'object',
+    properties: {
+      repairId: { type: 'string', description: 'Stable repair ID from approved catalog.' },
+      confirmedByHuman: { type: 'boolean', description: 'Explicit user confirmation when required.' },
+      parameters: { type: 'object', description: 'Optional repair parameters.' }
+    },
+    required: ['repairId']
+  },
+  requiredCapabilities: ['recovery:repair'],
+  riskTier: 'high',
+  confirmationPolicy: 'user_confirmation',
+  implementationStatus: 'available',
+  registrationStatus: 'enabled',
+  executionMode: 'asynchronous',
+  limits: DEFAULT_TOOL_LIMITS,
+  retryPolicy: NO_RETRY_POLICY,
+  source: 'builtin',
+  tags: ['recovery', 'repair', 'self_repair']
+}
+
 export const BUILTIN_TOOL_CATALOG: readonly ToolDefinition[] = [
   SystemGetTimeTool,
   WorkspaceGetContextSummaryTool,
@@ -3560,5 +4132,19 @@ export const BUILTIN_TOOL_CATALOG: readonly ToolDefinition[] = [
   WidgetsGetWeatherForecastTool,
   AgentsListAvailableTool,
   SkillsExecuteSkillTool,
+  CommSearchMessagesTool,
+  CommCreateDraftTool,
+  CommSendMessageTool,
+  MediaControlPlaybackTool,
+  DeviceGetAndroidStatusTool,
+  DeviceExecuteAndroidActionTool,
+  SmartHomeListEntitiesTool,
+  SmartHomeGetStateTool,
+  SmartHomeExecuteActionTool,
+  RecoveryGetStatusTool,
+  RecoveryListBackupsTool,
+  RecoveryCreateBackupTool,
+  RecoveryRunDiagnosticsTool,
+  RecoveryExecuteRepairTool,
   ProhibitedShellExecuteTool
 ] as const

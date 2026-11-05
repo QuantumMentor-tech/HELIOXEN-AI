@@ -4,6 +4,8 @@ export type NavDestinationId =
   | 'memory'
   | 'visual'
   | 'skills'
+  | 'office'
+  | 'integrations'
   | 'character'
   | 'monitor'
   | 'widgets'
@@ -52,6 +54,20 @@ export const NAV_DESTINATIONS: NavItem[] = [
     id: 'skills',
     label: 'Agent Town',
     description: 'Agent Town, Plugin Connectors & Dynamic Skills Studio',
+    status: 'active',
+    section: 'primary'
+  },
+  {
+    id: 'office',
+    label: 'Office Studio',
+    description: 'Document Studio, Spreadsheets, Slide Decks & AI Productivity',
+    status: 'active',
+    section: 'primary'
+  },
+  {
+    id: 'integrations',
+    label: 'Integrations',
+    description: 'Communication, Messaging Workflows, Media Services & Controlled Actions',
     status: 'active',
     section: 'primary'
   },

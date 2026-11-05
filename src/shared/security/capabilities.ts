@@ -1067,7 +1067,222 @@ export const CAPABILITIES: Record<string, CapabilityDefinition> = {
     status: 'active'
   },
 
+  // --- Step 43: Office Document Studio, Spreadsheets, Presentations, and AI Productivity ---
+  'office:read': {
+    id: 'office:read',
+    name: 'Read Office Documents',
+    description: 'Allows listing, inspecting, and viewing office documents, workbooks, and presentations.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'office:write': {
+    id: 'office:write',
+    name: 'Write Office Documents',
+    description: 'Allows creating, editing, saving, and deleting local office documents, workbooks, and presentations.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'office:export': {
+    id: 'office:export',
+    name: 'Export Office Documents',
+    description: 'Allows exporting office documents to .docx, .xlsx, .csv, and .pptx through trusted file dialogs.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'office:import': {
+    id: 'office:import',
+    name: 'Import Office Documents',
+    description: 'Allows importing external office files into local-first working drafts with security sanitization.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+
+  // --- Step 44: Communication & Media Integrations ---
+  'integrations:read': {
+    id: 'integrations:read',
+    name: 'View Integrations Catalog & Status',
+    description: 'Allows reading available integrations, connection states, and declared permissions.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'integrations:manage': {
+    id: 'integrations:manage',
+    name: 'Connect or Disconnect External Integrations',
+    description: 'Allows connecting or disconnecting external communication and media service accounts.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'communication:read': {
+    id: 'communication:read',
+    name: 'Read & Search External Messages',
+    description: 'Allows retrieving authorized message headers, search results, and conversation content.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'communication:draft': {
+    id: 'communication:draft',
+    name: 'Compose & Edit Message Drafts',
+    description: 'Allows authoring, updating, and validating local message drafts.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'communication:send': {
+    id: 'communication:send',
+    name: 'Send External Message',
+    description: 'Dispatches an external email, webhook, or team chat message under mandatory human confirmation.',
+    riskTier: 'high',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: true,
+    status: 'active'
+  },
+  'media_integration:read': {
+    id: 'media_integration:read',
+    name: 'Search Media Catalog & Playback State',
+    description: 'Allows querying authorized music catalogs, playlists, and current playback state.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'media_integration:control': {
+    id: 'media_integration:control',
+    name: 'Control Media Playback & Devices',
+    description: 'Allows issuing play, pause, skip, seek, and volume commands to authorized playback sessions.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+
+  // --- Step 45: Optional Android and Smart-Home Integrations ---
+  'device:read': {
+    id: 'device:read',
+    name: 'Read Android Device Status & Telemetry',
+    description: 'Allows inspecting paired Android device connection status, battery, and non-sensitive properties.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'device:pair': {
+    id: 'device:pair',
+    name: 'Pair & Authenticate Android Devices',
+    description: 'Allows initiating pairing, verifying verification codes, and managing authorized device connections.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'device:action': {
+    id: 'device:action',
+    name: 'Execute Allowlisted Android Device Actions',
+    description: 'Allows dispatching strictly allowlisted, parameter-checked actions to an authorized Android device.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'smart_home:read': {
+    id: 'smart_home:read',
+    name: 'Read Smart-Home Entities & Sensor States',
+    description: 'Allows discovering connected smart-home entities and inspecting current environmental sensor states.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'smart_home:control': {
+    id: 'smart_home:control',
+    name: 'Control Environmental Smart-Home Devices',
+    description: 'Allows actuating ordinary reversible devices such as lighting, switches, and climate thermostats.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'smart_home:security_control': {
+    id: 'smart_home:security_control',
+    name: 'Operate Physical Security Smart-Home Devices',
+    description: 'Allows locking/unlocking doors, disarming alarms, or opening access covers under mandatory human confirmation.',
+    riskTier: 'high',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: true,
+    status: 'active'
+  },
+
+  // --- Step 46: Recovery, Backup & Bounded Self-Repair Capabilities ---
+  'recovery:read': {
+    id: 'recovery:read',
+    name: 'Read Recovery State & Backups',
+    description: 'Allows inspecting crash recovery state, session status, diagnostic reports, and available backup manifests.',
+    riskTier: 'low',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'recovery:backup': {
+    id: 'recovery:backup',
+    name: 'Create Verified Backup',
+    description: 'Allows taking consistent, verified, SHA-256 checksummed snapshots of eligible application data stores.',
+    riskTier: 'moderate',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: false,
+    status: 'active'
+  },
+  'recovery:restore': {
+    id: 'recovery:restore',
+    name: 'Restore Application Backup',
+    description: 'Allows restoring application data stores from a verified backup under mandatory human confirmation and safety checkpoints.',
+    riskTier: 'high',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: true,
+    status: 'active'
+  },
+  'recovery:repair': {
+    id: 'recovery:repair',
+    name: 'Execute Bounded Self-Repair',
+    description: 'Allows executing registered, deterministic, allowlisted self-repairs under explicit boundaries.',
+    riskTier: 'high',
+    allowedRequester: 'renderer-main-window',
+    requiresHumanConsent: true,
+    status: 'active'
+  },
+
   // --- Permanently Prohibited Capabilities ---
+  'self_repair:arbitrary_code': {
+    id: 'self_repair:arbitrary_code',
+    name: 'Self-Modifying Code / Source Rewriting',
+    description: 'Autonomous rewriting or evaluation of replacement application source code. Permanently prohibited.',
+    riskTier: 'prohibited',
+    allowedRequester: 'none',
+    requiresHumanConsent: false,
+    status: 'prohibited'
+  },
+  'self_repair:bypass_security': {
+    id: 'self_repair:bypass_security',
+    name: 'Bypass Security Policies for Repair',
+    description: 'Disabling Electron security settings, authorizers, or credential protection during repair. Permanently prohibited.',
+    riskTier: 'prohibited',
+    allowedRequester: 'none',
+    requiresHumanConsent: false,
+    status: 'prohibited'
+  },
   'shell:execute': {
     id: 'shell:execute',
     name: 'Arbitrary Shell Execution',

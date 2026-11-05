@@ -34,6 +34,8 @@ import { VisualHubPanel } from '../visual/VisualHubPanel'
 import { WorldMonitorPanel } from '../world/WorldMonitorPanel'
 import { SystemWidgetsPanel } from '../widgets/SystemWidgetsPanel'
 import { AgentTownPanel } from '../agents/AgentTownPanel'
+import { OfficeStudioPanel } from '../office/OfficeStudioPanel'
+import { IntegrationsHubPanel } from '../integrations/IntegrationsHubPanel'
 import helioxenLogo from '../../assets/brand/helioxen-orbital-logo.png'
 
 import { CapturedStillImage } from '../../../../shared/capture'
@@ -106,7 +108,7 @@ export const PrimaryWorkspacePanel: React.FC<PrimaryWorkspacePanelProps> = ({
           actions={
             <div className="flex items-center space-x-2">
               <Badge variant="info" size="sm">
-                Step 42 of 48
+                Step 47 of 48
               </Badge>
               <IconButton
                 icon={
@@ -336,9 +338,19 @@ export const PrimaryWorkspacePanel: React.FC<PrimaryWorkspacePanelProps> = ({
             <SystemWidgetsPanel />
           </div>
         ) : currentDestination === 'skills' ? (
-          /* Agent Town, Plugin Connectors, Dynamic Skills, and Multi-Agent Collaboration (Phase 14, Steps 40-41) */
+          /* Agent Town, Plugin Connectors, Dynamic Skills, and Multi-Agent Collaboration (Phase 14, Steps 40-42) */
           <div className="flex-1 overflow-y-auto px-4 py-2">
             <AgentTownPanel />
+          </div>
+        ) : currentDestination === 'office' ? (
+          /* Office Document Studio, Spreadsheets, Presentations, and AI Productivity (Phase 15, Step 43) */
+          <div className="flex-1 overflow-y-auto px-4 py-2">
+            <OfficeStudioPanel />
+          </div>
+        ) : currentDestination === 'integrations' ? (
+          /* Communication Integrations, Messaging Workflows, Media Services (Phase 15, Step 44) */
+          <div className="flex-1 overflow-y-auto px-4 py-2">
+            <IntegrationsHubPanel />
           </div>
         ) : currentDestination === 'settings' ? (
           /* Provider & Model Registry Settings View (Phase 6, Step 17) */

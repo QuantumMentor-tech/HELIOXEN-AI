@@ -5,12 +5,14 @@ import {
   Database,
   Sparkles,
   Boxes,
+  FileText,
   Bot,
   Globe,
   Activity,
   Settings,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  Share2
 } from 'lucide-react'
 import { NavDestinationId, NAV_DESTINATIONS, NavItem } from './types'
 import helioxenLogo from '../../assets/brand/helioxen-orbital-logo.png'
@@ -31,6 +33,8 @@ const iconMap: Record<NavDestinationId, React.ReactNode> = {
   memory: <Database className="w-5 h-5" />,
   visual: <Sparkles className="w-5 h-5" />,
   skills: <Boxes className="w-5 h-5" />,
+  office: <FileText className="w-5 h-5" />,
+  integrations: <Share2 className="w-5 h-5" />,
   character: <Bot className="w-5 h-5" />,
   monitor: <Globe className="w-5 h-5" />,
   widgets: <Activity className="w-5 h-5" />,

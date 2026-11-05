@@ -98,7 +98,7 @@ import {
   browserScreenshotService,
   researchCollectionManager
 } from './research'
-import { authorizer, securityLogger, CredentialStorageService } from './security'
+import { authorizer, securityLogger, CredentialStorageService, validateIpcSender, isSafeExternalUrl } from './security'
 import { ProviderService, ModelRegistry, PreferencesStorage } from './ai'
 import { VoicePreferencesStorage } from './voice/VoicePreferencesStorage'
 import { DocumentExtractionService } from './documents'
@@ -127,15 +127,101 @@ import {
   widgetPreferencesManager
 } from './widgets'
 import { agentTownService, setAgentTownProviderServiceGetter } from './agents'
+import { OfficeService } from './office'
+import { IntegrationsManager } from './integrations'
+import { CommunicationService } from './communication'
+import { MediaIntegrationService } from './media-integrations'
+import { AndroidDeviceService } from './devices'
+import { SmartHomeService } from './smart-home'
+import { RecoveryService, getRecoveryService } from './recovery'
 
 // Global window reference
 let mainWindow: BrowserWindow | null = null
 let providerService: ProviderService | null = null
+let credentialStorageService: CredentialStorageService | null = null
 let modelRegistry: ModelRegistry | null = null
 let preferencesStorage: PreferencesStorage | null = null
 let voicePreferencesStorage: VoicePreferencesStorage | null = null
 let documentExtractionService: DocumentExtractionService | null = null
+let officeService: OfficeService | null = null
+let integrationsManager: IntegrationsManager | null = null
+let communicationService: CommunicationService | null = null
+let mediaIntegrationService: MediaIntegrationService | null = null
+let androidDeviceService: AndroidDeviceService | null = null
+let smartHomeService: SmartHomeService | null = null
 let activeStreamAbortController: AbortController | null = null
+
+export function getCredentialStorage(): CredentialStorageService {
+  if (!credentialStorageService) {
+    credentialStorageService = new CredentialStorageService(
+      join(app.getPath('userData'), 'credentials.json')
+    )
+  }
+  return credentialStorageService
+}
+
+export function getIntegrationsManager(): IntegrationsManager {
+  if (!integrationsManager) {
+    integrationsManager = new IntegrationsManager({
+      storageDir: app.getPath('userData'),
+      credentialStorage: getCredentialStorage()
+    })
+  }
+  return integrationsManager
+}
+
+export function getCommunicationService(): CommunicationService {
+  if (!communicationService) {
+    communicationService = new CommunicationService({
+      storageDir: app.getPath('userData'),
+      integrationsManager: getIntegrationsManager(),
+      providerServiceGetter: () => getProviderService()
+    })
+  }
+  return communicationService
+}
+
+export function getMediaIntegrationService(): MediaIntegrationService {
+  if (!mediaIntegrationService) {
+    mediaIntegrationService = new MediaIntegrationService({
+      integrationsManager: getIntegrationsManager()
+    })
+  }
+  return mediaIntegrationService
+}
+
+export function getOfficeService(): OfficeService {
+  if (!officeService) {
+    officeService = new OfficeService({
+      storageDir: app.getPath('userData'),
+      providerServiceGetter: () => getProviderService()
+    })
+  }
+  return officeService
+}
+
+export function getAndroidDeviceService(): AndroidDeviceService {
+  if (!androidDeviceService) {
+    androidDeviceService = new AndroidDeviceService({
+      storageDir: app.getPath('userData')
+    })
+  }
+  return androidDeviceService
+}
+
+export function getSmartHomeService(): SmartHomeService {
+  if (!smartHomeService) {
+    smartHomeService = new SmartHomeService({
+      storageDir: app.getPath('userData'),
+      credentialStorage: getCredentialStorage()
+    })
+  }
+  return smartHomeService
+}
+
+export function getAppRecoveryService(): RecoveryService {
+  return getRecoveryService(app.getPath('userData'))
+}
 
 export function getDocumentExtractionService(): DocumentExtractionService {
   if (!documentExtractionService) {
@@ -172,11 +258,8 @@ export function getVoicePreferencesStorage(): VoicePreferencesStorage {
 
 export function getProviderService(): ProviderService {
   if (!providerService) {
-    const credentialStorage = new CredentialStorageService(
-      join(app.getPath('userData'), 'credentials.json')
-    )
     providerService = new ProviderService(
-      credentialStorage,
+      getCredentialStorage(),
       undefined,
       getModelRegistry(),
       undefined,
@@ -203,43 +286,11 @@ if (!hasSingleInstanceLock && typeof app?.quit === 'function') {
 }
 
 /**
- * Validates that an external URL protocol is safe before dispatching to the OS shell.
- * Restricts strictly to http: and https: to prevent protocol handler exploits.
- */
-function isSafeExternalUrl(urlStr: string): boolean {
-  try {
-    const parsed = new URL(urlStr)
-    return parsed.protocol === 'https:' || parsed.protocol === 'http:'
-  } catch {
-    return false
-  }
-}
-
-/**
  * Validates that an IPC request originates strictly from the authorized top-level main window frame.
  * Throws a normalized IpcException if sender or frame validation fails.
  */
 export function assertValidSender(event: IpcMainInvokeEvent): void {
-  if (!mainWindow || mainWindow.isDestroyed()) {
-    throw new IpcException(
-      'OPERATION_UNAVAILABLE',
-      'Primary application window is unavailable or destroyed'
-    )
-  }
-  // Verify sender webContents matches authorized mainWindow
-  if (event.sender.id !== mainWindow.webContents.id) {
-    throw new IpcException(
-      'UNAUTHORIZED_SENDER',
-      'IPC invocation rejected: Unauthorized sender WebContents ID'
-    )
-  }
-  // Verify request originates from top-level main frame (reject child iframes or subframes)
-  if (event.senderFrame && event.senderFrame.parent) {
-    throw new IpcException(
-      'UNAUTHORIZED_FRAME',
-      'IPC invocation rejected: Requests from child frames or iframes are prohibited'
-    )
-  }
+  validateIpcSender(event, mainWindow)
 }
 
 /**
@@ -1896,6 +1947,325 @@ export function registerAiAndCredentialIpcHandlers(): void {
     authorizer.authorize('skills:author', { requester: 'renderer-main-window' })
     return await agentTownService.refineSkillWithAi(payload.skillId, payload.instruction)
   })
+
+  // Step 43: Office Document Studio, Spreadsheets, Presentations, and AI Productivity
+  ipcMain.handle(IPC_CHANNELS.OFFICE_LIST_DOCUMENTS, async (event) => {
+    assertValidSender(event)
+    authorizer.authorize('office:read', { requester: 'renderer-main-window' })
+    return getOfficeService().listDocuments()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.OFFICE_GET_DOCUMENT, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('office:read', { requester: 'renderer-main-window' })
+    return getOfficeService().getDocument(payload.documentId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.OFFICE_SAVE_DOCUMENT, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('office:write', { requester: 'renderer-main-window' })
+    return getOfficeService().saveDocument(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.OFFICE_DELETE_DOCUMENT, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('office:write', { requester: 'renderer-main-window' })
+    return getOfficeService().deleteDocument(payload.documentId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.OFFICE_LIST_TEMPLATES, async (event) => {
+    assertValidSender(event)
+    authorizer.authorize('office:read', { requester: 'renderer-main-window' })
+    return getOfficeService().listTemplates()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.OFFICE_CREATE_FROM_TEMPLATE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('office:write', { requester: 'renderer-main-window' })
+    return getOfficeService().createFromTemplate(payload.templateId, payload?.title)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.OFFICE_EXPORT_DOCUMENT, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('office:export', { requester: 'renderer-main-window' })
+    return await getOfficeService().exportDocument(payload, mainWindow)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.OFFICE_IMPORT_DOCUMENT, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('office:import', { requester: 'renderer-main-window' })
+    return await getOfficeService().importDocument(payload?.sourceFilePath, mainWindow)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.OFFICE_GENERATE_AI_DRAFT, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('office:write', { requester: 'renderer-main-window' })
+    return await getOfficeService().generateAiDraft(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.OFFICE_REWRITE_TEXT_AI, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('office:write', { requester: 'renderer-main-window' })
+    return await getOfficeService().rewriteTextAi(payload.text, payload.instruction)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.OFFICE_SUGGEST_FORMULA_AI, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('office:read', { requester: 'renderer-main-window' })
+    return await getOfficeService().suggestFormulaAi(payload.description, payload?.sampleDataSnippet)
+  })
+
+  // Step 44: Integrations Management IPC Handlers
+  ipcMain.handle(IPC_CHANNELS.INTEGRATIONS_LIST, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('integrations:read', { requester: 'renderer-main-window' })
+    return getIntegrationsManager().listIntegrations(payload?.category)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.INTEGRATIONS_GET, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('integrations:read', { requester: 'renderer-main-window' })
+    return getIntegrationsManager().getIntegration(payload?.integrationId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.INTEGRATIONS_CONNECT, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('integrations:manage', { requester: 'renderer-main-window' })
+    return await getIntegrationsManager().connectIntegration(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.INTEGRATIONS_DISCONNECT, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('integrations:manage', { requester: 'renderer-main-window' })
+    return await getIntegrationsManager().disconnectIntegration(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.INTEGRATIONS_HEALTH_CHECK, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('integrations:read', { requester: 'renderer-main-window' })
+    return await getIntegrationsManager().checkHealth(payload?.integrationId)
+  })
+
+  // Step 44: Communication Subsystem IPC Handlers
+  ipcMain.handle(IPC_CHANNELS.COMMUNICATION_LIST_MESSAGES, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('communication:read', { requester: 'renderer-main-window' })
+    return getCommunicationService().listMessages(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.COMMUNICATION_GET_MESSAGE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('communication:read', { requester: 'renderer-main-window' })
+    return getCommunicationService().getMessage(payload?.messageId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.COMMUNICATION_SEARCH_MESSAGES, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('communication:read', { requester: 'renderer-main-window' })
+    return getCommunicationService().listMessages(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.COMMUNICATION_CREATE_DRAFT, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('communication:draft', { requester: 'renderer-main-window' })
+    return getCommunicationService().createDraft(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.COMMUNICATION_GET_DRAFT, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('communication:draft', { requester: 'renderer-main-window' })
+    return getCommunicationService().getDraft(payload?.draftId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.COMMUNICATION_UPDATE_DRAFT, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('communication:draft', { requester: 'renderer-main-window' })
+    return getCommunicationService().updateDraft(payload?.draftId, payload?.updates)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.COMMUNICATION_DELETE_DRAFT, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('communication:draft', { requester: 'renderer-main-window' })
+    return getCommunicationService().deleteDraft(payload?.draftId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.COMMUNICATION_LIST_DRAFTS, async (event) => {
+    assertValidSender(event)
+    authorizer.authorize('communication:draft', { requester: 'renderer-main-window' })
+    return getCommunicationService().listDrafts()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.COMMUNICATION_REQUEST_SEND_CONFIRMATION, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('communication:draft', { requester: 'renderer-main-window' })
+    return getCommunicationService().requestSendConfirmation(payload?.draftId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.COMMUNICATION_CONFIRM_AND_SEND, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('communication:send', { requester: 'renderer-main-window' })
+    return await getCommunicationService().confirmAndSend(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.COMMUNICATION_GENERATE_AI_DRAFT, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('communication:draft', { requester: 'renderer-main-window' })
+    return await getCommunicationService().generateAiDraft(payload)
+  })
+
+  // Step 44: Media Integration IPC Handlers
+  ipcMain.handle(IPC_CHANNELS.MEDIA_INTEGRATION_SEARCH, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('media_integration:read', { requester: 'renderer-main-window' })
+    return await getMediaIntegrationService().searchCatalog(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.MEDIA_INTEGRATION_GET_PLAYBACK_STATE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('media_integration:read', { requester: 'renderer-main-window' })
+    return getMediaIntegrationService().getPlaybackState(payload?.integrationId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.MEDIA_INTEGRATION_CONTROL_PLAYBACK, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('media_integration:control', { requester: 'renderer-main-window' })
+    return await getMediaIntegrationService().controlPlayback(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.MEDIA_INTEGRATION_LIST_DEVICES, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('media_integration:read', { requester: 'renderer-main-window' })
+    return getMediaIntegrationService().listDevices(payload?.integrationId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.MEDIA_INTEGRATION_LIST_PLAYLISTS, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('media_integration:read', { requester: 'renderer-main-window' })
+    return getMediaIntegrationService().listPlaylists(payload?.integrationId)
+  })
+
+  // Step 45: Android Device Integration IPC Handlers
+  ipcMain.handle(IPC_CHANNELS.DEVICES_LIST_ANDROID, async (event) => {
+    assertValidSender(event)
+    authorizer.authorize('device:read', { requester: 'renderer-main-window' })
+    return getAndroidDeviceService().listDevices()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.DEVICES_GET_ANDROID_STATUS, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('device:read', { requester: 'renderer-main-window' })
+    return getAndroidDeviceService().getDeviceStatus(payload?.deviceId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.DEVICES_PAIR_ANDROID, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('device:pair', { requester: 'renderer-main-window' })
+    return await getAndroidDeviceService().pairDevice(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.DEVICES_DISCONNECT_ANDROID, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('device:pair', { requester: 'renderer-main-window' })
+    return getAndroidDeviceService().disconnectDevice(payload?.deviceId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.DEVICES_EXECUTE_ANDROID_ACTION, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('device:action', { requester: 'renderer-main-window' })
+    return await getAndroidDeviceService().executeAction(payload)
+  })
+
+  // Step 45: Smart-Home Integration IPC Handlers
+  ipcMain.handle(IPC_CHANNELS.SMART_HOME_GET_HUB_STATUS, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('smart_home:read', { requester: 'renderer-main-window' })
+    return getSmartHomeService().getHubStatus(payload?.hubId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SMART_HOME_CONNECT_HUB, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('smart_home:control', { requester: 'renderer-main-window' })
+    return await getSmartHomeService().connectHub(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SMART_HOME_DISCONNECT_HUB, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('smart_home:control', { requester: 'renderer-main-window' })
+    return await getSmartHomeService().disconnectHub(payload?.hubId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SMART_HOME_LIST_ENTITIES, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('smart_home:read', { requester: 'renderer-main-window' })
+    return getSmartHomeService().listEntities(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SMART_HOME_GET_ENTITY_STATE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('smart_home:read', { requester: 'renderer-main-window' })
+    return getSmartHomeService().getEntityState(payload?.entityId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SMART_HOME_REQUEST_SECURITY_CONFIRMATION, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('smart_home:security_control', { requester: 'renderer-main-window' })
+    return getSmartHomeService().requestSecurityConfirmation(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SMART_HOME_EXECUTE_ACTION, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('smart_home:control', { requester: 'renderer-main-window' })
+    return await getSmartHomeService().executeAction(payload)
+  })
+
+  // Step 46: Recovery, Verified Backups, and Controlled Self-Repair IPC Handlers
+  ipcMain.handle(IPC_CHANNELS.RECOVERY_GET_STATUS, async (event) => {
+    assertValidSender(event)
+    authorizer.authorize('recovery:read', { requester: 'renderer-main-window' })
+    return getAppRecoveryService().getOverview()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.RECOVERY_LIST_BACKUPS, async (event) => {
+    assertValidSender(event)
+    authorizer.authorize('recovery:read', { requester: 'renderer-main-window' })
+    return getAppRecoveryService().listBackups()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.RECOVERY_CREATE_BACKUP, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('recovery:backup', { requester: 'renderer-main-window' })
+    return await getAppRecoveryService().createBackup(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.RECOVERY_VERIFY_BACKUP, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('recovery:read', { requester: 'renderer-main-window' })
+    return getAppRecoveryService().verifyBackup(payload?.backupId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.RECOVERY_RESTORE_PREVIEW, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('recovery:read', { requester: 'renderer-main-window' })
+    return getAppRecoveryService().getRestorePreview(payload?.backupId)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.RECOVERY_EXECUTE_RESTORE, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('recovery:restore', { requester: 'renderer-main-window' })
+    return await getAppRecoveryService().executeRestore(payload)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.RECOVERY_RUN_DIAGNOSTICS, async (event) => {
+    assertValidSender(event)
+    authorizer.authorize('recovery:read', { requester: 'renderer-main-window' })
+    return getAppRecoveryService().runDiagnostics()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.RECOVERY_EXECUTE_REPAIR, async (event, payload) => {
+    assertValidSender(event)
+    authorizer.authorize('recovery:repair', { requester: 'renderer-main-window' })
+    return await getAppRecoveryService().executeRepair(payload)
+  })
 }
 
 /**
@@ -2280,6 +2650,60 @@ app.on('will-quit', () => {
   ipcMain.removeHandler(IPC_CHANNELS.SKILLS_IMPORT_PACKAGE)
   ipcMain.removeHandler(IPC_CHANNELS.SKILLS_GENERATE_AI_DRAFT)
   ipcMain.removeHandler(IPC_CHANNELS.SKILLS_REFINE_AI_DRAFT)
+  ipcMain.removeHandler(IPC_CHANNELS.OFFICE_LIST_DOCUMENTS)
+  ipcMain.removeHandler(IPC_CHANNELS.OFFICE_GET_DOCUMENT)
+  ipcMain.removeHandler(IPC_CHANNELS.OFFICE_SAVE_DOCUMENT)
+  ipcMain.removeHandler(IPC_CHANNELS.OFFICE_DELETE_DOCUMENT)
+  ipcMain.removeHandler(IPC_CHANNELS.OFFICE_LIST_TEMPLATES)
+  ipcMain.removeHandler(IPC_CHANNELS.OFFICE_CREATE_FROM_TEMPLATE)
+  ipcMain.removeHandler(IPC_CHANNELS.OFFICE_EXPORT_DOCUMENT)
+  ipcMain.removeHandler(IPC_CHANNELS.OFFICE_IMPORT_DOCUMENT)
+  ipcMain.removeHandler(IPC_CHANNELS.OFFICE_GENERATE_AI_DRAFT)
+  ipcMain.removeHandler(IPC_CHANNELS.OFFICE_REWRITE_TEXT_AI)
+  ipcMain.removeHandler(IPC_CHANNELS.OFFICE_SUGGEST_FORMULA_AI)
+  ipcMain.removeHandler(IPC_CHANNELS.INTEGRATIONS_LIST)
+  ipcMain.removeHandler(IPC_CHANNELS.INTEGRATIONS_GET)
+  ipcMain.removeHandler(IPC_CHANNELS.INTEGRATIONS_CONNECT)
+  ipcMain.removeHandler(IPC_CHANNELS.INTEGRATIONS_DISCONNECT)
+  ipcMain.removeHandler(IPC_CHANNELS.INTEGRATIONS_HEALTH_CHECK)
+  ipcMain.removeHandler(IPC_CHANNELS.COMMUNICATION_LIST_MESSAGES)
+  ipcMain.removeHandler(IPC_CHANNELS.COMMUNICATION_GET_MESSAGE)
+  ipcMain.removeHandler(IPC_CHANNELS.COMMUNICATION_SEARCH_MESSAGES)
+  ipcMain.removeHandler(IPC_CHANNELS.COMMUNICATION_CREATE_DRAFT)
+  ipcMain.removeHandler(IPC_CHANNELS.COMMUNICATION_GET_DRAFT)
+  ipcMain.removeHandler(IPC_CHANNELS.COMMUNICATION_UPDATE_DRAFT)
+  ipcMain.removeHandler(IPC_CHANNELS.COMMUNICATION_DELETE_DRAFT)
+  ipcMain.removeHandler(IPC_CHANNELS.COMMUNICATION_LIST_DRAFTS)
+  ipcMain.removeHandler(IPC_CHANNELS.COMMUNICATION_REQUEST_SEND_CONFIRMATION)
+  ipcMain.removeHandler(IPC_CHANNELS.COMMUNICATION_CONFIRM_AND_SEND)
+  ipcMain.removeHandler(IPC_CHANNELS.COMMUNICATION_GENERATE_AI_DRAFT)
+  ipcMain.removeHandler(IPC_CHANNELS.MEDIA_INTEGRATION_SEARCH)
+  ipcMain.removeHandler(IPC_CHANNELS.MEDIA_INTEGRATION_GET_PLAYBACK_STATE)
+  ipcMain.removeHandler(IPC_CHANNELS.MEDIA_INTEGRATION_CONTROL_PLAYBACK)
+  ipcMain.removeHandler(IPC_CHANNELS.MEDIA_INTEGRATION_LIST_DEVICES)
+  ipcMain.removeHandler(IPC_CHANNELS.MEDIA_INTEGRATION_LIST_PLAYLISTS)
+  ipcMain.removeHandler(IPC_CHANNELS.DEVICES_LIST_ANDROID)
+  ipcMain.removeHandler(IPC_CHANNELS.DEVICES_GET_ANDROID_STATUS)
+  ipcMain.removeHandler(IPC_CHANNELS.DEVICES_PAIR_ANDROID)
+  ipcMain.removeHandler(IPC_CHANNELS.DEVICES_DISCONNECT_ANDROID)
+  ipcMain.removeHandler(IPC_CHANNELS.DEVICES_EXECUTE_ANDROID_ACTION)
+  ipcMain.removeHandler(IPC_CHANNELS.SMART_HOME_GET_HUB_STATUS)
+  ipcMain.removeHandler(IPC_CHANNELS.SMART_HOME_CONNECT_HUB)
+  ipcMain.removeHandler(IPC_CHANNELS.SMART_HOME_DISCONNECT_HUB)
+  ipcMain.removeHandler(IPC_CHANNELS.SMART_HOME_LIST_ENTITIES)
+  ipcMain.removeHandler(IPC_CHANNELS.SMART_HOME_GET_ENTITY_STATE)
+  ipcMain.removeHandler(IPC_CHANNELS.SMART_HOME_REQUEST_SECURITY_CONFIRMATION)
+  ipcMain.removeHandler(IPC_CHANNELS.SMART_HOME_EXECUTE_ACTION)
+  ipcMain.removeHandler(IPC_CHANNELS.RECOVERY_GET_STATUS)
+  ipcMain.removeHandler(IPC_CHANNELS.RECOVERY_LIST_BACKUPS)
+  ipcMain.removeHandler(IPC_CHANNELS.RECOVERY_CREATE_BACKUP)
+  ipcMain.removeHandler(IPC_CHANNELS.RECOVERY_VERIFY_BACKUP)
+  ipcMain.removeHandler(IPC_CHANNELS.RECOVERY_RESTORE_PREVIEW)
+  ipcMain.removeHandler(IPC_CHANNELS.RECOVERY_EXECUTE_RESTORE)
+  ipcMain.removeHandler(IPC_CHANNELS.RECOVERY_RUN_DIAGNOSTICS)
+  ipcMain.removeHandler(IPC_CHANNELS.RECOVERY_EXECUTE_REPAIR)
+  getAppRecoveryService().recordCleanShutdown()
+  getAppRecoveryService().dispose()
   productivityService.dispose()
   mediaLibraryService.dispose()
   visualHubService.dispose()
